@@ -1,0 +1,18 @@
+{
+   "id" : 1,
+   "method" : "Proof.List",
+   "params" : [
+      {
+         "match" : [
+            {
+               "key" : "proof_organization",
+               "value" : "fuzamei"
+            }
+         ],
+         "page" : {
+            "number" : 1,
+            "size" : 10
+         }
+      }
+   ]
+}

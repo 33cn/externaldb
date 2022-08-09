@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package proto;
+option go_package = "../proto";
+
+message Config {
+  string esHost = 1;
+  string chain33host = 2;
+  string pushHost = 3;
+  string pushName = 4;
+  repeated string execAddresses = 5;
+  string para = 6;
+  string prefix = 7;
+  // pushBind 和 host 不一样， 在于云上， 外网ip 不可以bind
+  string pushBind = 8;
+  string name = 9;
+  // 同步开始位置, 如果收到之前的, 忽略. (老版本的chain33, 会从0开始同步,
+  // 不能指定开始)
+  int64 startSeq = 10;
+  // 指定推送格式,
+  string pushFormat = 11;
+  string mqHost = 12;
+}

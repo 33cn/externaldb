@@ -1,0 +1,69 @@
+{
+  "size": 0,
+  "query": {
+    "bool": {
+      "filter": [
+        {
+          "term": {
+            "asset_symbol": "bty"
+          }
+        },
+        {
+          "term": {
+            "asset_exec": "coins"
+          }
+        },
+        {
+          "range": {
+            "total": { "gt" : 0}
+          }
+        }
+      ],
+      "should": [
+        {
+          "term": {
+            "exec": ""
+          }
+        },
+        {
+          "term": {
+            "exec": "16htvcBNSEA7fZhAdLJphDwQRQJaHpyHTp"
+          }
+        }
+      ],
+      "must_not": {
+        "term": {
+          "type": "contract"
+        }
+      }
+    }
+  },
+  "aggs": {
+    "total": {
+      "terms": {
+        "field": "address",
+        "size": 10000,
+        "order": {
+          "total": "desc"
+        }
+      },
+      "aggs": {
+        "total": {
+          "sum": {
+            "field": "total"
+          }
+        },
+        "frozen": {
+          "sum": {
+            "field": "frozen"
+          }
+        },
+        "balance": {
+          "sum": {
+            "field": "balance"
+          }
+        }
+      }
+    }
+  }
+}

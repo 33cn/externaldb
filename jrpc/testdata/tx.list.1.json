@@ -1,0 +1,18 @@
+{
+   "id" : 1,
+   "method" : "Tx.TxList",
+   "params" : [
+      {
+         "sort" : [
+            {
+               "key" : "height",
+               "ascending" : true
+            }
+         ],
+         "page" : {
+            "number" : 1,
+            "size" : 2
+         }
+      }
+   ]
+}

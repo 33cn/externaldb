@@ -1,0 +1,40 @@
+{
+   "id" : 1,
+   "method" : "Tx.TxList",
+   "params" : [
+      { 
+         "match" : [
+            {
+               "query" : {
+                  "match_one" : [
+                     {"key" : "from", "value" : "1HyW3ZJ8DJVwmMuEjaiXg6D9Zz8ooZLRbJ"},
+                     {"key" : "to", "value" : "1HyW3ZJ8DJVwmMuEjaiXg6D9Zz8ooZLRbJ"}
+                  ]
+               }
+            },
+            {
+               "query" : {
+                  "match_one" : [
+                     {"key" : "is_para", "value" : true},
+                     {"key" : "success", "value" : true}
+                  ]
+               }
+            },
+            {
+               "value" : "multisig",
+               "key" : "execer"
+            }
+         ],
+         "sort" : [
+            {
+               "key" : "height",
+               "ascending" : true
+            }
+         ],
+         "page" : {
+            "number" : 1,
+            "size" : 100
+         }
+      }
+   ]
+}

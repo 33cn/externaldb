@@ -1,0 +1,73 @@
+version: '2'
+
+services:
+  zoo1:
+    image: wurstmeister/zookeeper
+    restart: unless-stopped
+    container_name: zoo1
+    hostname: zoo1
+    ports:
+      - "2182:2181"
+    environment:
+      TZ: Asia/Shanghai
+      ZOO_MY_ID: 1
+      ZOO_PORT: 2181
+      ZOO_SERVERS: server.1=zoo1:2888:3888
+    volumes:
+      - ./zoo1/data:/data
+
+  kafka1:
+    image: wurstmeister/kafka:2.13-2.6.0
+    restart: unless-stopped
+    container_name: kafka1
+    hostname: kafka1
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 0
+      KAFKA_ZOOKEEPER_CONNECT: zoo1:2181  #指定zk连接字符串，[hostname:port]以逗号分隔
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://172.24.54.28:9092  #宿主机监听端口
+    depends_on:
+      - zoo1
+    external_links:
+      - zoo1
+    volumes:
+      - ./kafka1/kafka-logs:/kafka  #kafka日志数据存储位置
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafka2:
+    image: wurstmeister/kafka:2.13-2.6.0
+    restart: unless-stopped
+    container_name: kafka2
+    hostname: kafka1
+    ports:
+      - "9093:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zoo1:2181  #指定zk连接字符串，[hostname:port]以逗号分隔
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://172.24.54.28:9093  #宿主机监听端口
+    depends_on:
+      - zoo1
+    links:
+      - zoo1
+    volumes:
+      - ./kafka2/kafka-logs:/kafka  #kafka日志数据存储位置
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafka-manager:
+    image: sheepkiller/kafka-manager
+    restart: unless-stopped
+    container_name: kafka-manager
+    hostname: kafka-manager
+    environment:
+      ZK_HOSTS: zoo1:2181
+      KAFKA_BROKERS: 172.24.54.28:9092
+      APPLICATION_SECRET: "GX"
+    ports:
+      - "9000:9000"
+    links: # 连接本compose文件创建的container
+      - kafka1
+      - kafka2
+      - zoo1

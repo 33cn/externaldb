@@ -1,0 +1,14 @@
+{
+   "method" : "Proof.Show",
+   "params" : [
+      {
+         "match" : [
+            {
+               "key" : "proof_tx_hash",
+               "value" : "0xc9e1a33446f140f12548496708c804b6cedc31b9025b11925997f590e1e2ec7d"
+            }
+         ]
+      }
+   ],
+   "id" : 1
+}

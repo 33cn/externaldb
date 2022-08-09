@@ -1,0 +1,9 @@
+{
+	"id" : 1 ,
+	"method" : "MultiSig.Gets", 
+	"params":[
+		{"address" :["38QFFgjSUozg6cGjis6cxACUJvkpfTD7ZS","31s9k1GFBkrYCSUSsDderRB3BvxocbeDKW"]		}
+	]
+}
+
+

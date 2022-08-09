@@ -1,0 +1,9 @@
+{
+	"id" : 1 ,
+	"method" : "BlockStat.StatGets", 
+	"params":[{ 
+		"height" : [1, 10, 100]
+	}]
+}
+
+

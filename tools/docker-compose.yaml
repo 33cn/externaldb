@@ -1,0 +1,54 @@
+version: '2'
+
+services:
+  elasticsearch: # Elasticsearch Instance
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
+    volumes: # Persist ES data in seperate "esdata" volume
+      - /home/linj/top-asset/ES/data2:/usr/share/elasticsearch/data
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+      - "xpack.security.enabled=false"
+    network_mode: "host"
+    ports: # Expose Elasticsearch ports
+      - "9300:9300"
+      - "9200:9200"
+
+  sync:
+    container_name: externaldb-sync
+    image: chain33/externaldb/sync:lastest
+    depends_on:
+      - elasticsearch
+    volumes:
+      - "/home/linj/d-d/sync:/root/config/"
+    network_mode: "host"
+    ports:
+      - "20000:20000"
+    command: /root/sync -f /root/config/externaldb.toml &
+
+
+  convert:
+    container_name: externaldb-convert
+    image: chain33/externaldb/convert:lastest
+    depends_on:
+      - elasticsearch
+      - sync
+    volumes:
+      - "/home/linj/d-d/convert:/root/config/"
+    network_mode: "host"
+    command: /root/convert -f /root/config/externaldb.toml &
+
+  jrpc:
+    container_name: externaldb-jrpc
+    image: chain33/externaldb/jrpc:lastest
+    depends_on:
+      - elasticsearch
+    volumes:
+      - "/home/linj/d-d/jrpc:/root/config/"
+    network_mode: "host"
+    ports:
+      - "20001:20001"
+    command: /root/jrpc -f /root/config/externaldb.toml &
+

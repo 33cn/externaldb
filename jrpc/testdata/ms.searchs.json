@@ -1,0 +1,21 @@
+{
+	"id" : 1 ,
+	"method" : "MultiSig.Searches", 
+	"params":[
+		[{ 
+		"match" : [
+			{"key": "address", "value" : "1LDGrokrZjo1HtSmSnw8ef3oy5Vm1nctbj"},
+			{"key": "type", "value" : "owner"}
+		]		
+		},
+		{ 
+		"match" : [
+			{"key": "create_address", "value" : "12qyocayNF7Lv6C9qW4avxs2E7U41fKSfv"},
+			{"key": "type", "value" : "account"}
+		]		
+		}
+		]
+	]
+}
+
+

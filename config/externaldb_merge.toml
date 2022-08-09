@@ -1,0 +1,193 @@
+# 选择用于同步的库是es还是mq
+dbtype = "es"
+# esVersion：6和7
+esVersion = 6
+# 扣款地址，当这里有值的时候，会在代码里面自动将扣款地址会存入convertEs中，
+managerAddress = []
+
+# 依赖的chain33 节点配置
+[chain]
+title = "user.p.XXX."
+grpcHost="http://localhost:8802"
+host = "http://127.0.0.1:8801"
+symbol = "bty"
+otherChainGenesis = 1000000
+perBlockCoin = 1
+# 需要配置, 坏掉推送序号的列表, 需要成对配置, 如 5号和6号是增加区块和回滚区块, 需要配置成 [5,6]
+rollbackSeq = []
+coinPrecision = 1e8
+perTicketReward = 0.25
+
+# 展开数据的数据库
+[convertEs]
+host = "http://127.0.0.1:9200/"
+prefix = "db01_"
+# bulk 是否将解析数据批量写入es，开启批量写入有助于提高对于大批量数据的处理能力
+bulk = true
+user = "elastic"
+pwd = "elastic"
+
+[esIndex]
+numberOfShards = 5
+numberOfReplicas = 0
+
+# 同步程序的配置
+[sync]
+name = "sync"
+# 程序绑定的推送地址 (这个是本机地址), 用于开启本sync服务
+pushBind = "0.0.0.0:20000"
+# chain33节点推送链接的地址 (云上, 可能需要设置外网地址), 此参数将注册到chain33节点，节点收到区块后，通过此参数将区块信息推送到本服务
+pushHost = "127.0.0.1:20000"
+# 推送名字
+pushName = "sync-1"
+# pb(ycc链和>=6.7); json(<6.7)
+pushFormat = "pb"
+# 开始同步的seq, 
+# 1. 从非开始需要同时配置3个对应的值(先用节点的客户端查好)
+# 2. startSeq!=0, 其他为0, 从0开始同步, 但不处理前面的
+startSeq = 0
+startHeight = 0
+startBlockHash = ""
+
+[rpc]
+# 程序名字
+name = "rpc"
+jrpcName = "jrpc"
+# 服务绑定本机绑定地址和端口
+host = "0.0.0.0:9992"
+jrpcHost = "0.0.0.0:9993"
+# 访问地址白名单
+whiteList = ["*"]
+# swagger地址
+swaggerHost = "127.0.0.1:9992"
+enableSwagger = true
+triggerCount = 200.00
+
+[convert]
+execAddresses = ["none", "coins",  "coinsx", "pos33", "manage", "paracross", "valnode", "ticket", "blackwhite", "blackwhite", "cert", "echo", "evm", "game", "guess", "hashlock", "jsvm", "lottery", "multisig", "norm", "oracle", "pokerbull", "privacy", "relay", "retrieve", "token", "trade", "unfreeze"]
+
+# 开始展开的seq
+startSeq = 0
+
+# 程序名字(影响日志文件前缀)
+appName = "convert"
+
+# 一般链用common 记录 交易列表
+# 存证相关的用 proof, 记录存证
+defaultExec = "common"
+
+# 是否处理它链的交易. 
+# 一般是为平行链展开数据时用, 但没有部署平行链节点, 只部署了主链节点, 不处理相当过滤交易
+dealOtherChain = false
+
+# 是否开启权限控制，存证服务有需要可以开启
+openAccessControl = false
+
+# 展开数据项配置支持
+# 每类合约都会生成N中数据，按需要控制来生成的数据种类
+[[convert.data]]
+# 为common时，通用配置
+# 目前支持两项 ["account", "transaction"]
+# transaction: 为所有合约交易生成数据： 为支持合约的交易生成更详细的数据
+#              如调用的函数， 涉及的金额等
+# account: 为支持的合约生成数据，因为不支持的合约不能辨别资产信息
+exec = "common"
+# all：演示用， 把所有能展开的数据类型列出来， 方便 generate 配置
+all = ["account", "transaction"]
+generate = ["account", "transaction"]
+
+[[convert.data]]
+exec = "proof"
+all = []
+generate = []
+
+[[convert.data]]
+exec = "config"
+all = []
+generate = []
+
+[[convert.data]]
+exec = "proof_delete"
+all = []
+generate = []
+
+[[convert.data]]
+exec = "proof_recover"
+all = []
+generate = []
+
+[[convert.data]]
+exec = "template"
+all = []
+generate = []
+
+[[convert.data]]
+exec = "evm"
+all = []
+generate = []
+
+# 用于解析chain33 jrpc调用
+[[convert.data]]
+exec = "user.config"
+all = []
+generate = []
+
+[[convert.data]]
+exec = "user.proof_recover"
+all = []
+generate = []
+
+[[convert.data]]
+exec = "user.filepart"
+all = []
+generate = []
+
+[[convert.data]]
+exec = "user.filecollect"
+all = []
+generate = []
+
+# 存证部分不需要下列合约
+#[[convert.data]]
+#exec="coins"
+#all=[]
+#generate=[]
+#
+#[[convert.data]]
+#exec="coinsx"
+#all=[]
+#generate=[]
+#
+#[[convert.data]]
+#exec="pos33"
+#all=["pos33", "bind"]
+#generate=["pos33", "bind"]
+#
+#[[convert.data]]
+#exec="ticket"
+#all=["ticket", "bind"]
+#generate=["ticket", "bind"]
+#
+#[[convert.data]]
+#exec="unfreeze"
+#all=[]
+#generate=[]
+#
+#[[convert.data]]
+#exec="trade"
+#all=[]
+#generate=[]
+#
+#[[convert.data]]
+#exec="token"
+#all=[]
+#generate=[]
+#
+#[[convert.data]]
+#exec="multisig"
+#all=[]
+#generate=[]
+#
+#[[convert.stat]]
+#stat="block"
+

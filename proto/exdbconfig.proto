@@ -1,0 +1,107 @@
+syntax = "proto3";
+package proto;
+
+import "convert.proto";
+option go_package = "../proto";
+
+message Chain33 {
+  string title = 1;
+  string grpcHost = 2;
+  string host = 3;
+  string symbol = 4;
+  int64 otherChainGenesis = 5;
+  int64 perBlockCoin = 6;
+  repeated int64 rollbackSeq = 7;
+  double coinPrecision = 8;
+  double perTicketReward = 9;
+}
+
+message Kafka {
+  string host = 1;
+  string group = 2;
+  string topic = 3;
+}
+
+message ESDB {
+  string host = 2;
+  string prefix = 3;
+  bool bulk = 4;
+  string user = 5;
+  string pwd = 6;
+}
+
+message ESIndex {
+  int32 numberOfShards = 1;
+  int32 numberOfReplicas = 2;
+}
+
+message RPC {
+  string host = 1;
+  repeated string whiteList = 2;
+  string swaggerHost = 3;
+  string name = 4;
+  double triggerCount = 5;
+
+  bool enableSwagger = 6;
+  string jrpcHost = 7;
+  string jrpcName = 8;
+}
+
+message Sync {
+  string name = 9;
+
+  // pushBind 和 host 不一样， 在于云上， 外网ip 不可以bind
+  string pushHost = 1; // 外网ip
+  string pushName = 2;
+  string pushBind = 3; // 本地
+
+  // 同步开始位置, 如果收到之前的, 忽略. (老版本的chain33, 会从0开始同步,
+  // 不能指定开始)
+  int64 startSeq = 4;
+  int64 startHeight = 5;
+  string startBlockHash = 6;
+  // 指定推送格式,
+  string pushFormat = 11;
+}
+
+message Convert {
+  string appName = 1;
+  repeated string execAddresses = 5;
+  int64 startSeq = 9;
+  repeated ExecConfig data = 10;
+  repeated StatConfig stat = 11;
+  // 默认的处理插件
+  string defaultExec = 12;
+  // 是否处理非本链数据
+  bool dealOtherChain = 13;
+  // 是否开启权限控制
+  bool openAccessControl = 14;
+  bool saveBlockInfo = 15;
+  string addressDriver = 16;
+}
+
+message ConfigNew {
+
+  // 处理的是哪条链 bityuan 或 user.p.xxxx.
+  // Chain 依赖的chain33节点jsonrpc地址
+  Chain33 chain = 1;
+
+  // 同步和展开的数据库
+  string dbtype = 2;
+  int32 es_version = 10;
+  ESDB sync_es = 3;
+  ESDB convert_es = 4;
+  Sync sync = 5;
+  ESIndex es_index = 6;
+  RPC rpc = 7;
+  Convert convert = 8;
+  Kafka kafka = 9;
+  repeated string manager_address = 11;
+  repeated Contract Contracts = 12;
+}
+
+message Contract {
+  string Abi = 1;
+  string Bin = 2;
+  string type = 3;
+}

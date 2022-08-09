@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package proto;
+option go_package = "../proto";
+
+message ExecConfig {
+  string exec = 1;
+  repeated string all = 2;
+  repeated string generate = 3;
+}
+
+message StatConfig { string stat = 1; }
+
+message AppConfig {
+  string esHostRead = 1;
+  string esHostWrite = 2;
+  string symbol = 3;
+  string appName = 4;
+  repeated string execAddresses = 5;
+  string para = 6;
+  string prefix = 7;
+  string prefixWrite = 8;
+  int64 startSeq = 9;
+  repeated ExecConfig data = 10;
+  repeated StatConfig stat = 11;
+  // 默认的处理插件
+  string defaultExec = 12;
+  // 是否处理非本链数据
+  bool dealOtherChain = 13;
+}

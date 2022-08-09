@@ -1,0 +1,7 @@
+{
+   "method" : "Account.TopAssetCount",
+   "params" : [
+      { }
+   ],
+   "id" : 1
+}

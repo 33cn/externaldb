@@ -1,0 +1,19 @@
+{
+        "id" : 1 ,
+        "method" : "Account.ListAsset", 
+        "params":[{
+   		"match" : [
+   		   {
+   		      "value" : "145HxiUdRSzt49kKA2WoDyjBcYAJB67M46",
+   		      "key" : "address"
+   		   },
+   		   {
+   		      "value" : "1BXvgjmBw1aBgmGn1hjfGyRkmN3krWpFP4",
+   		      "key" : "exec"
+   		   }
+   		]
+	}
+		
+        ]
+}
+
