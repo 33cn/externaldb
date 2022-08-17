@@ -1,0 +1,9 @@
+{
+	"id" : 1 ,
+	"method" : "Proof.Gets", 
+	"params":[
+		{"hash" :["0xa7904af41d9886c01873c7cfdda471e9d839c42eb6e4e1223c6e118b33b94322","0x25c86923535ee1a209725450ba270110e5446c3afbdeb8112990f86160d81eb0"]}
+	]
+}
+
+

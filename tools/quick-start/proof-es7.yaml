@@ -1,0 +1,18 @@
+version: '2'
+
+services:
+  externaldb-es7: # Elasticsearch Instance
+    container_name: ${ES_NAME}
+    image: elasticsearch:7.4.2
+    volumes: # Persist ES data in seperate "esdata" volume
+      - ${ES_DIR}:/usr/share/elasticsearch/data
+    environment:
+      - bootstrap.memory_lock=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+      # 要启用密码，请将此项设为true
+      - "xpack.security.enabled=true"
+      - ELASTIC_PASSWORD=${ES_PASSWORD}
+    ports: # Expose Elasticsearch ports
+      - ${ES_BIND}:${ES_PORT_HTTP}:9200
+      - ${ES_BIND}:${ES_PORT_TCP}:9300

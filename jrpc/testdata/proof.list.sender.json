@@ -1,0 +1,18 @@
+{
+   "id" : 1,
+   "method" : "Proof.List",
+   "params" : [
+      {
+         "match" : [
+            {
+               "key" : "proof_sender",
+               "value" : "12qyocayNF7Lv6C9qW4avxs2E7U41fKSfv"
+            }
+         ],
+         "page" : {
+            "number" : 1,
+            "size" : 10
+         }
+      }
+   ]
+}

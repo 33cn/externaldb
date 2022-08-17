@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package proto;
+option go_package = "../proto";
+
+message TransactionConfig {
+  string esHostRead = 1;
+  string esHostWrite = 2;
+  repeated string execAddresses = 5;
+  string para = 6;
+  string prefix = 7;
+  string prefixWrite = 8;
+  int64 startSeq = 9;
+}

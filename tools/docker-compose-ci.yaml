@@ -1,0 +1,62 @@
+version: '2'
+
+services:
+  elasticsearch: # Elasticsearch Instance
+    container_name: es-ci
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.1.1
+    volumes: # Persist ES data in seperate "esdata" volume
+      - APP_DATA_DIR:/usr/share/elasticsearch/data
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - discovery.type=single-node
+      - "xpack.security.enabled=false"
+    network_mode: "host"
+    ports: # Expose Elasticsearch ports
+      - "9300:9300"
+      - "9200:9200"
+
+  dummy_node:
+    container_name: dummy-node-ci
+    image: chain33/externaldb/dummy-node:lastest
+    network_mode: "host"
+    ports:
+      - "8801:8801"
+    command: /root/dummy_node &
+
+  sync:
+    container_name: externaldb-sync-ci
+    image: chain33/externaldb/sync:lastest
+    depends_on:
+      - elasticsearch
+      - dummy_node
+    volumes:
+      - "APP_CONFIG_DIR:/root/config/"
+    network_mode: "host"
+    ports:
+      - "20000:20000"
+    command: /root/ci-start-sync.sh
+
+  convert:
+    container_name: externaldb-convert-ci
+    image: chain33/externaldb/convert:lastest
+    depends_on:
+      - elasticsearch
+      - sync
+    volumes:
+      - "APP_CONFIG_DIR:/root/config/"
+    network_mode: "host"
+    command: /root/ci-start-convert.sh
+
+  jrpc:
+    container_name: externaldb-jrpc-ci
+    image: chain33/externaldb/jrpc:lastest
+    depends_on:
+      - elasticsearch
+    volumes:
+      - "APP_CONFIG_DIR:/root/config/"
+    network_mode: "host"
+    ports:
+      - "20001:20001"
+    command: /root/jrpc -f /root/config/jrpc.toml &
+

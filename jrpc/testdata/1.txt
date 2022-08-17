@@ -1,0 +1,59 @@
+curl -d@miner-accounts.1.json http://47.111.132.89:19991/bityuan | json_pp 
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   605  100   482  100   123  20740   5292 --:--:-- --:--:-- --:--:-- 20956
+{
+   "id" : 1,
+   "result" : [
+      {
+         "address" : "1bgg6HwQretMiVcSWvayPRvVtwjyKfz1J",
+         "type" : "personage",
+         "asset_symbol" : "bty",
+         "frozen" : 0,
+         "height_index" : 276954100002,
+         "balance" : 136584147,
+         "total" : 136584147,
+         "asset_exec" : "coins",
+         "exec" : ""
+      },
+      {
+         "total" : 969926200000,
+         "asset_exec" : "coins",
+         "exec" : "16htvcBNSEA7fZhAdLJphDwQRQJaHpyHTp",
+         "frozen" : 900000000000,
+         "balance" : 69926200000,
+         "height_index" : 276834200001,
+         "type" : "contractInternal",
+         "asset_symbol" : "bty",
+         "address" : "1bgg6HwQretMiVcSWvayPRvVtwjyKfz1J"
+      }
+   ],
+   "error" : null
+}
+
+
+$ curl -d@miner-status.1.json http://47.111.132.89:19992/bityuan | json_pp
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   483  100   319  100   164   2899   1490 --:--:-- --:--:-- --:--:--  2926
+{
+   "result" : [
+      {
+         "LastDayMinerCount" : 0,
+         "LastMineTs" : 2781691,
+         "LastHourMinerCount" : 0,
+         "LastMineHeight" : 1563691542,
+         "Address" : "1bgg6HwQretMiVcSWvayPRvVtwjyKfz1J"
+      },
+      {
+         "LastMineHeight" : 1563784728,
+         "LastHourMinerCount" : 0,
+         "Address" : "1LszcYi5sCkrvrHHyZFxkC14NF2563xNXF",
+         "LastMineTs" : 2800128,
+         "LastDayMinerCount" : 10
+      }
+   ],
+   "id" : 1,
+   "error" : null
+}
+

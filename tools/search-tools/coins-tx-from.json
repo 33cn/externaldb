@@ -1,0 +1,16 @@
+{
+	"size" : 10,
+   	"query" : {
+		"match": {
+			"from": "1HkEim2QSMnoKVFr9gi9LmaHVvNsQru8u9"
+		}
+	},
+	"aggs" : {
+		"agg" : {
+			"terms" : {
+				"field" : "to",
+				"size" : 100000
+			}
+		}
+	}
+}

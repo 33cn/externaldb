@@ -1,0 +1,44 @@
+version: '2'
+
+services:
+  sync:
+    container_name: ${SYNC_NAME}
+    image: docker.io/ubuntu:16.04 
+    volumes:
+      - "./bin/:/root/bin/"
+      - "./etc/:/root/etc/"
+    network_mode: "host"
+    command: /root/bin/sync_convert -f /root/etc/externaldb.toml &
+
+  rpc: # 存证项目使用
+    container_name: ${RPC_NAME}
+    image: docker.io/ubuntu:16.04 
+    volumes:
+      - "./bin/:/root/bin/"
+      - "./etc/:/root/etc/"
+      - "./etc/mime.types:/etc/mime.types" # 用于处理文件后缀
+    network_mode: "host"
+    command: /root/bin/rpc -f /root/etc/externaldb.toml &
+
+#  convert:
+#    container_name: externaldb-convert
+#    image: docker.io/ubuntu:16.04
+#    depends_on:
+#      - sync
+#    volumes:
+#      - "/root//externaldb/ex//bin/:/root/bin/"
+#      - "/root//externaldb/ex/etc/:/root/etc/"
+#    network_mode: "host"
+#    command: /root/bin/convert -f /root/etc/externaldb.toml &
+#
+#  jrpc: # 浏览器项目使用
+#    container_name: externaldb-jrpc
+#    image: docker.io/ubuntu:16.04 
+#    volumes:
+#      - "./bin/:/root/bin/"
+#      - "./etc/:/root/etc/"
+#    network_mode: "host"
+#    ports:
+#      - "9992:9992"
+#    command: /root/bin/jrpc -f /root/etc/externaldb.toml &
+#

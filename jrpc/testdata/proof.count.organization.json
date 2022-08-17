@@ -1,0 +1,14 @@
+{
+   "method" : "Proof.Count",
+   "params" : [
+      {
+         "match" : [
+            {
+               "key" : "proof_organization",
+               "value" : "fuzamei"
+            }
+         ]
+      }
+   ],
+   "id" : 1
+}

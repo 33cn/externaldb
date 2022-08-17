@@ -1,0 +1,8 @@
+{
+        "id" : 1 ,
+        "method" : "Trade.ListLastPrice", 
+        "params":[ 
+		[{"asset_exec":"token", "asset_symbol":"TEST"}]
+        ]
+}
+

@@ -1,0 +1,30 @@
+{
+   "id" : 1,
+   "method" : "Tx.TxList",
+   "params" : [
+      {
+         "match" : [
+            {
+               "value" : "multisig",
+               "key" : "execer"
+            }
+	 ],
+         "match_one" : [
+            {
+               "value" : "1coins",
+               "key" : "execer"
+            }
+         ],
+         "sort" : [
+            {
+               "key" : "height",
+               "ascending" : true
+            }
+         ],
+         "page" : {
+            "number" : 1,
+            "size" : 100
+         }
+      }
+   ]
+}

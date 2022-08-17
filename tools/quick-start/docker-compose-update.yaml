@@ -1,0 +1,11 @@
+version: '2'
+
+services:
+  convert-update:
+    container_name: ${CONVERT_NAME}-update
+    image: docker.io/ubuntu:16.04
+    volumes:
+      - ./bin-update/:/root/bin/
+      - ./etc/:/root/etc/
+    network_mode: "host"
+    command: /root/bin/convert -f /root/etc/externaldb-update.toml &

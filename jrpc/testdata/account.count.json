@@ -1,0 +1,14 @@
+{
+   "method" : "Account.Count",
+   "params" : [
+      {
+         "match" : [
+            {
+               "value" : "coins",
+               "key" : "asset_exec"
+            }
+         ]
+      }
+   ],
+   "id" : 1
+}

@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package proto;
+option go_package = "../proto";
+
+message Chain {
+  string title = 1;
+  string prefix = 2;
+  string esHost = 3;
+  string symbol = 4;
+  string appName = 5;
+}
+
+message JRPCConfig {
+  string host = 1;
+  repeated Chain chain = 2;
+  repeated string whiteList = 3;
+  string name = 4;
+  string swaggerHost = 5;
+}

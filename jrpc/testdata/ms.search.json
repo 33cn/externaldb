@@ -1,0 +1,12 @@
+{
+	"id" : 1 ,
+	"method" : "MultiSig.Search", 
+	"params":[{ 
+		"match" : [
+			{"key": "address", "value" : "1LDGrokrZjo1HtSmSnw8ef3oy5Vm1nctbj"},
+			{"key": "type", "value" : "owner"}
+		]		
+	}]
+}
+
+

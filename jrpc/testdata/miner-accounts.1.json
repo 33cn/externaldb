@@ -1,0 +1,9 @@
+{
+	"id" : 1 ,
+	"method" : "MinerAccount.ShowAccounts", 
+	"params":[{ 
+		"addresses" : ["1bgg6HwQretMiVcSWvayPRvVtwjyKfz1J"]
+	}]
+}
+
+

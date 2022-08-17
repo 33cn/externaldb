@@ -1,0 +1,9 @@
+{
+	"id" : 1 ,
+	"method" : "MinerAccount.ShowMinerStatus", 
+	"params":[{ 
+		"addresses" : []
+	}]
+}
+
+
