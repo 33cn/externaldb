@@ -1,0 +1,2439 @@
+basePath: /
+definitions:
+  rpcutils.Addresses:
+    properties:
+      address:
+        description: 地址列表
+        items:
+          type: string
+        type: array
+    type: object
+  rpcutils.CountByTime:
+    properties:
+      match:
+        description: 匹配条件
+        items:
+          $ref: '#/definitions/rpcutils.QMatch'
+        type: array
+      ranges:
+        $ref: '#/definitions/rpcutils.QRanges'
+        description: 范围
+    type: object
+  rpcutils.DonationStats:
+    properties:
+      match:
+        description: 匹配条件
+        items:
+          $ref: '#/definitions/rpcutils.QMatch'
+        type: array
+      subSumAgg:
+        $ref: '#/definitions/rpcutils.QMatchKey'
+        description: 子聚合字段
+      termsAgg:
+        $ref: '#/definitions/rpcutils.QMatchKey'
+        description: 聚合字段
+    type: object
+  rpcutils.Hashes:
+    properties:
+      hash:
+        description: 哈希列表
+        items:
+          type: string
+        type: array
+    type: object
+  rpcutils.Organizations:
+    properties:
+      organization:
+        description: 组织列表
+        items:
+          type: string
+        type: array
+    type: object
+  rpcutils.QMatch:
+    properties:
+      key:
+        description: 字段名
+        type: string
+      value:
+        description: 值
+    type: object
+  rpcutils.QMatchKey:
+    properties:
+      key:
+        description: 字段名
+        type: string
+    type: object
+  rpcutils.QRanges:
+    properties:
+      key:
+        description: 字段名
+        type: string
+      ranges:
+        description: 范围
+        items:
+          $ref: '#/definitions/rpcutils.Range'
+        type: array
+    type: object
+  rpcutils.QSort:
+    properties:
+      ascending:
+        description: 是否升序
+        type: boolean
+      key:
+        description: 字段名
+        type: string
+    type: object
+  rpcutils.Range:
+    properties:
+      end:
+        description: 结束位置（小于等于）
+      start:
+        description: 开始位置（大于等于）
+    type: object
+  rpcutils.RepLastSeq:
+    properties:
+      lastConvertSeq:
+        description: 最新解析区块高度
+        type: integer
+      lastSyncSeq:
+        description: 最新同步区块高度
+        type: integer
+    type: object
+  rpcutils.ServerResponse:
+    properties:
+      error:
+        description: 错误描述
+      id:
+        description: 请求标识
+        type: integer
+      result:
+        description: 返回结果
+    type: object
+  rpcutils.SpecifiedFields:
+    properties:
+      count:
+        description: 总量
+        type: integer
+      fields:
+        description: 字段列表
+        items:
+          type: string
+        type: array
+      match:
+        description: 匹配条件
+        items:
+          $ref: '#/definitions/rpcutils.QMatch'
+        type: array
+      sort:
+        description: 排序
+        items:
+          $ref: '#/definitions/rpcutils.QSort'
+        type: array
+    type: object
+  rpcutils.TotalStats:
+    properties:
+      match:
+        description: 匹配条件
+        items:
+          $ref: '#/definitions/rpcutils.QMatch'
+        type: array
+      sumAgg:
+        $ref: '#/definitions/rpcutils.QMatchKey'
+        description: 聚合字段
+    type: object
+  rpcutils.VolunteerStats:
+    properties:
+      match:
+        description: 匹配条件
+        items:
+          $ref: '#/definitions/rpcutils.QMatch'
+        type: array
+      subSumAgg:
+        $ref: '#/definitions/rpcutils.QMatchKey'
+        description: 子统计字段
+      subTermsAgg:
+        $ref: '#/definitions/rpcutils.QMatchKey'
+        description: 子组合字段
+      termsAgg:
+        $ref: '#/definitions/rpcutils.QMatchKey'
+        description: 聚合字段
+    type: object
+  swagger.Attributes:
+    properties:
+      ml.enabled:
+        type: string
+      ml.machine_memory:
+        type: string
+      ml.max_open_jobs:
+        type: string
+    type: object
+  swagger.BufferPools:
+    properties:
+      direct:
+        $ref: '#/definitions/swagger.Direct'
+      mapped:
+        $ref: '#/definitions/swagger.Mapped'
+    type: object
+  swagger.CPU:
+    properties:
+      load_average:
+        $ref: '#/definitions/swagger.LoadAverage'
+      percent:
+        type: integer
+    type: object
+  swagger.ChainStatus:
+    properties:
+      coin:
+        description: 主代币信息
+        type: string
+      push_seq:
+        description: 推送高度
+        type: integer
+      status:
+        description: 状态
+        type: string
+      version:
+        $ref: '#/definitions/swagger.ChainVersionInfo'
+        description: 版本
+    type: object
+  swagger.ChainVersionInfo:
+    properties:
+      app:
+        description: 应用 app 的版本
+        type: string
+      chain33:
+        description: 版本信息，版本号-GitCommit（前八个字符）
+        type: string
+      localDb:
+        description: localdb 版本号
+        type: string
+      title:
+        description: 区块链名，该节点 chain33.toml 中配置的 title 值
+        type: string
+    type: object
+  swagger.Classes:
+    properties:
+      current_loaded_count:
+        type: integer
+      total_loaded_count:
+        type: integer
+      total_unloaded_count:
+        type: integer
+    type: object
+  swagger.ClientRequest:
+    properties:
+      id:
+        description: 请求标识
+        type: integer
+      method:
+        description: 方法
+        type: string
+      params:
+        description: 参数
+    type: object
+  swagger.ClientRequestNil:
+    properties:
+      id:
+        description: 请求标识
+        type: integer
+      method:
+        description: 方法
+        type: string
+    type: object
+  swagger.Collectors:
+    properties:
+      old:
+        $ref: '#/definitions/swagger.GcOld'
+      young:
+        $ref: '#/definitions/swagger.GcYoung'
+    type: object
+  swagger.Completion:
+    properties:
+      size_in_bytes:
+        type: integer
+    type: object
+  swagger.Direct:
+    properties:
+      count:
+        type: integer
+      total_capacity_in_bytes:
+        type: integer
+      used_in_bytes:
+        type: integer
+    type: object
+  swagger.Docs:
+    properties:
+      count:
+        type: integer
+      deleted:
+        type: integer
+    type: object
+  swagger.DonationStatItem:
+    properties:
+      count:
+        description: 数量
+        type: integer
+      name:
+        description: 名称
+        type: string
+      total:
+        description: 总合
+        type: integer
+    type: object
+  swagger.DonationStats:
+    properties:
+      itemes:
+        description: 列表
+        items:
+          $ref: '#/definitions/swagger.DonationStatItem'
+        type: array
+    type: object
+  swagger.EVMToken:
+    properties:
+      amount:
+        description: 金额
+        type: integer
+      call_func_name:
+        description: 调用方法名称
+        type: string
+      contract_addr:
+        description: 合约地址
+        type: string
+      contract_used_gas:
+        description: 消耗gas
+        type: integer
+      evm_block_hash:
+        description: 区块hash
+        type: string
+      evm_block_time:
+        description: 上链时间
+        type: integer
+      evm_events:
+        description: evm事件
+        type: string
+      evm_height:
+        description: 区块高度
+        type: integer
+      evm_height_index:
+        description: 高度索引
+        type: integer
+      evm_note:
+        description: 备注信息
+        type: string
+      evm_param:
+        description: evm调用参数
+        type: string
+      evm_tx_hash:
+        description: 交易hash
+        type: string
+      goods_id:
+        description: 物品唯一标识
+        type: integer
+      goods_type:
+        description: 物品类型
+        type: integer
+      label_id:
+        description: 物品标签id
+        type: string
+      name:
+        description: 物品名称
+        type: string
+      owner:
+        description: 拥有者
+        type: string
+      publish_time:
+        description: 发布时间
+        type: integer
+      publisher:
+        description: 发布者
+        type: string
+      remark:
+        description: 备注
+        type: string
+      source_hash:
+        description: 关联交易hash
+        items:
+          type: string
+        type: array
+      trace_hash:
+        description: 关联溯源hash
+        items:
+          type: string
+        type: array
+    type: object
+  swagger.EsStatus:
+    properties:
+      _nodes:
+        $ref: '#/definitions/swagger.NodesCount'
+        description: 节点数量信息
+      cluster_name:
+        description: 集群名
+        type: string
+      nodes:
+        additionalProperties:
+          $ref: '#/definitions/swagger.Node'
+        description: 节点信息
+        type: object
+      status:
+        description: 状态
+        type: string
+    type: object
+  swagger.Fielddata:
+    properties:
+      evictions:
+        type: integer
+      memory_size_in_bytes:
+        type: integer
+    type: object
+  swagger.FileSizes:
+    type: object
+  swagger.Flush:
+    properties:
+      total:
+        type: integer
+      total_time_in_millis:
+        type: integer
+    type: object
+  swagger.Gc:
+    properties:
+      collectors:
+        $ref: '#/definitions/swagger.Collectors'
+    type: object
+  swagger.GcOld:
+    properties:
+      collection_count:
+        type: integer
+      collection_time_in_millis:
+        type: integer
+    type: object
+  swagger.GcYoung:
+    properties:
+      collection_count:
+        type: integer
+      collection_time_in_millis:
+        type: integer
+    type: object
+  swagger.Get:
+    properties:
+      current:
+        type: integer
+      exists_time_in_millis:
+        type: integer
+      exists_total:
+        type: integer
+      missing_time_in_millis:
+        type: integer
+      missing_total:
+        type: integer
+      time_in_millis:
+        type: integer
+      total:
+        type: integer
+    type: object
+  swagger.HTTP:
+    properties:
+      current_open:
+        type: integer
+      total_opened:
+        type: integer
+    type: object
+  swagger.Health:
+    properties:
+      status:
+        description: 状态
+        type: string
+      version:
+        description: 版本
+        type: string
+    type: object
+  swagger.ISearch:
+    properties:
+      fetch_current:
+        type: integer
+      fetch_time_in_millis:
+        type: integer
+      fetch_total:
+        type: integer
+      open_contexts:
+        type: integer
+      query_current:
+        type: integer
+      query_time_in_millis:
+        type: integer
+      query_total:
+        type: integer
+      scroll_current:
+        type: integer
+      scroll_time_in_millis:
+        type: integer
+      scroll_total:
+        type: integer
+      suggest_current:
+        type: integer
+      suggest_time_in_millis:
+        type: integer
+      suggest_total:
+        type: integer
+    type: object
+  swagger.Indexing:
+    properties:
+      delete_current:
+        type: integer
+      delete_time_in_millis:
+        type: integer
+      delete_total:
+        type: integer
+      index_current:
+        type: integer
+      index_failed:
+        type: integer
+      index_time_in_millis:
+        type: integer
+      index_total:
+        type: integer
+      is_throttled:
+        type: boolean
+      noop_update_total:
+        type: integer
+      throttle_time_in_millis:
+        type: integer
+    type: object
+  swagger.Indices:
+    properties:
+      completion:
+        $ref: '#/definitions/swagger.Completion'
+      docs:
+        $ref: '#/definitions/swagger.Docs'
+      fielddata:
+        $ref: '#/definitions/swagger.Fielddata'
+      flush:
+        $ref: '#/definitions/swagger.Flush'
+      get:
+        $ref: '#/definitions/swagger.Get'
+      indexing:
+        $ref: '#/definitions/swagger.Indexing'
+      merges:
+        $ref: '#/definitions/swagger.Merges'
+      query_cache:
+        $ref: '#/definitions/swagger.QueryCache'
+      recovery:
+        $ref: '#/definitions/swagger.Recovery'
+      refresh:
+        $ref: '#/definitions/swagger.Refresh'
+      request_cache:
+        $ref: '#/definitions/swagger.RequestCache'
+      search:
+        $ref: '#/definitions/swagger.ISearch'
+      segments:
+        $ref: '#/definitions/swagger.Segments'
+      store:
+        $ref: '#/definitions/swagger.Store'
+      translog:
+        $ref: '#/definitions/swagger.Translog'
+      warmer:
+        $ref: '#/definitions/swagger.Warmer'
+    type: object
+  swagger.Jvm:
+    properties:
+      buffer_pools:
+        $ref: '#/definitions/swagger.BufferPools'
+      classes:
+        $ref: '#/definitions/swagger.Classes'
+      gc:
+        $ref: '#/definitions/swagger.Gc'
+      mem:
+        $ref: '#/definitions/swagger.JvmMem'
+      threads:
+        $ref: '#/definitions/swagger.Threads'
+      timestamp:
+        type: integer
+      uptime_in_millis:
+        type: integer
+    type: object
+  swagger.JvmMem:
+    properties:
+      heap_committed_in_bytes:
+        type: integer
+      heap_max_in_bytes:
+        type: integer
+      heap_used_in_bytes:
+        type: integer
+      heap_used_percent:
+        type: integer
+      non_heap_committed_in_bytes:
+        type: integer
+      non_heap_used_in_bytes:
+        type: integer
+      pools:
+        $ref: '#/definitions/swagger.Pools'
+    type: object
+  swagger.ListEVMResult:
+    properties:
+      error:
+        description: 错误描述
+      id:
+        description: 请求标识
+        type: integer
+      result:
+        description: 返回结果
+        items:
+          $ref: '#/definitions/swagger.EVMToken'
+        type: array
+    type: object
+  swagger.ListProofResult:
+    properties:
+      error:
+        description: 错误描述
+      id:
+        description: 请求标识
+        type: integer
+      result:
+        description: 返回结果
+        items:
+          $ref: '#/definitions/swagger.Proof'
+        type: array
+    type: object
+  swagger.LoadAverage:
+    properties:
+      15m:
+        type: number
+      1m:
+        type: number
+      5m:
+        type: number
+    type: object
+  swagger.Mapped:
+    properties:
+      count:
+        type: integer
+      total_capacity_in_bytes:
+        type: integer
+      used_in_bytes:
+        type: integer
+    type: object
+  swagger.Member:
+    properties:
+      address:
+        description: 地址
+        type: string
+      auth_type:
+        description: 认证类型
+        type: integer
+      block_hash:
+        description: 区块哈希
+        type: string
+      email:
+        description: 邮箱
+        type: string
+      enterprise_name:
+        description: 企业名称
+        type: string
+      height:
+        description: 高度
+        type: integer
+      height_index:
+        description: 高度索引
+        type: integer
+      index:
+        description: 交易索引号
+        type: integer
+      note:
+        description: 备注
+        type: string
+      organization:
+        description: 组织
+        type: string
+      phone:
+        description: 手机号
+        type: string
+      real_name:
+        description: 真实姓名
+        type: string
+      role:
+        description: 角色
+        type: string
+      send:
+        description: 交易发起人
+        type: string
+      ts:
+        description: 上链时间
+        type: integer
+      tx_hash:
+        description: 交易hash
+        type: string
+      user_icon:
+        description: 头像地址链接
+        type: string
+      user_name:
+        description: 用户名
+        type: string
+    type: object
+  swagger.Merges:
+    properties:
+      current:
+        type: integer
+      current_docs:
+        type: integer
+      current_size_in_bytes:
+        type: integer
+      total:
+        type: integer
+      total_auto_throttle_in_bytes:
+        type: integer
+      total_docs:
+        type: integer
+      total_size_in_bytes:
+        type: integer
+      total_stopped_time_in_millis:
+        type: integer
+      total_throttled_time_in_millis:
+        type: integer
+      total_time_in_millis:
+        type: integer
+    type: object
+  swagger.Node:
+    properties:
+      attributes:
+        $ref: '#/definitions/swagger.Attributes'
+      host:
+        type: string
+      http:
+        $ref: '#/definitions/swagger.HTTP'
+      indices:
+        $ref: '#/definitions/swagger.Indices'
+        description: 索引
+      ip:
+        type: string
+      jvm:
+        $ref: '#/definitions/swagger.Jvm'
+        description: java虚拟机
+      name:
+        type: string
+      os:
+        $ref: '#/definitions/swagger.Os'
+        description: 系统
+      roles:
+        items:
+          type: string
+        type: array
+      timestamp:
+        type: integer
+      transport_address:
+        type: string
+    type: object
+  swagger.NodesCount:
+    properties:
+      failed:
+        description: 不正常数量
+        type: integer
+      successful:
+        description: 正常数量
+        type: integer
+      total:
+        description: 总计
+        type: integer
+    type: object
+  swagger.Organization:
+    properties:
+      count:
+        description: 数量
+        type: integer
+      note:
+        description: 备注
+        type: string
+      organization:
+        description: 组织名
+        type: string
+    type: object
+  swagger.Os:
+    properties:
+      cpu:
+        $ref: '#/definitions/swagger.CPU'
+      mem:
+        $ref: '#/definitions/swagger.OsMem'
+      swap:
+        $ref: '#/definitions/swagger.Swap'
+      timestamp:
+        type: integer
+    type: object
+  swagger.OsMem:
+    properties:
+      free_in_bytes:
+        type: integer
+      free_percent:
+        type: integer
+      total_in_bytes:
+        type: integer
+      used_in_bytes:
+        type: integer
+      used_percent:
+        type: integer
+    type: object
+  swagger.Pools:
+    properties:
+      old:
+        $ref: '#/definitions/swagger.PoolsOld'
+      survivor:
+        $ref: '#/definitions/swagger.Survivor'
+      young:
+        $ref: '#/definitions/swagger.PoolsYoung'
+    type: object
+  swagger.PoolsOld:
+    properties:
+      max_in_bytes:
+        type: integer
+      peak_max_in_bytes:
+        type: integer
+      peak_used_in_bytes:
+        type: integer
+      used_in_bytes:
+        type: integer
+    type: object
+  swagger.PoolsYoung:
+    properties:
+      max_in_bytes:
+        type: integer
+      peak_max_in_bytes:
+        type: integer
+      peak_used_in_bytes:
+        type: integer
+      used_in_bytes:
+        type: integer
+    type: object
+  swagger.Proof:
+    properties:
+      basehash:
+        description: 增量存证依赖的主hash
+        type: string
+      evidenceName:
+        description: 存证名称
+        type: string
+      prehash:
+        description: 增量存证前一个hash
+        type: string
+      proof_block_hash:
+        description: 区块hash
+        type: string
+      proof_block_time:
+        description: 上链时间
+        type: integer
+      proof_data:
+        description: 存证数据
+        type: string
+      proof_deleted:
+        description: 删除存证交易hash
+        type: string
+      proof_deleted_flag:
+        description: 删除标志
+        type: boolean
+      proof_deleted_note:
+        description: 删除备注
+        type: string
+      proof_height:
+        description: 存证高度
+        type: integer
+      proof_height_index:
+        description: 存证高度索引
+        type: integer
+      proof_id:
+        description: 存证id
+        type: string
+      proof_note:
+        description: 存证备注
+        type: string
+      proof_organization:
+        description: 组织
+        type: string
+      proof_original:
+        description: 来源
+        type: string
+      proof_sender:
+        description: 存证发起者
+        type: string
+      proof_tx_hash:
+        description: 交易哈希
+        type: string
+      source_hash:
+        description: 依赖交易哈希
+      update_hash:
+        description: 更新依赖主哈希
+        type: string
+      update_version:
+        description: 更新版本
+        type: integer
+      user_auth_type:
+        description: 用户认证类型
+        type: integer
+      user_email:
+        description: 用户邮箱
+        type: string
+      user_enterprise_name:
+        description: 用户企业名称
+        type: string
+      user_icon:
+        description: 用户头像链接地址
+        type: string
+      user_name:
+        description: 用户名
+        type: string
+      user_phone:
+        description: 用户手机号
+        type: string
+      user_real_name:
+        description: 用户真是名称
+        type: string
+      version:
+        description: 存证版本
+        type: integer
+    type: object
+  swagger.QFetch:
+    properties:
+      fetch_source:
+        description: 是否获取
+        type: boolean
+      keys:
+        description: 字段名列表
+        items:
+          type: string
+        type: array
+    type: object
+  swagger.QMatch:
+    properties:
+      key:
+        description: 字段名
+        type: string
+      value:
+        description: 值
+    type: object
+  swagger.QMultiMatch:
+    properties:
+      keys:
+        description: 字段名列表
+        items:
+          type: string
+        type: array
+      value:
+        description: 值
+    type: object
+  swagger.QPage:
+    properties:
+      number:
+        description: 当前页数
+        type: integer
+      size:
+        description: 大小
+        type: integer
+    type: object
+  swagger.QRange:
+    properties:
+      end:
+        description: 小于等于
+      gt:
+        description: 大于
+      key:
+        description: 字段名
+        type: string
+      lt:
+        description: 小于
+      start:
+        description: 大于等于
+    type: object
+  swagger.QSize:
+    properties:
+      size:
+        description: 大小
+        type: integer
+    type: object
+  swagger.QSort:
+    properties:
+      ascending:
+        description: 是否递增
+        type: boolean
+      key:
+        description: 字段名
+        type: string
+    type: object
+  swagger.Query:
+    properties:
+      fetch:
+        $ref: '#/definitions/swagger.QFetch'
+        description: 获取字段
+      filter:
+        description: 过滤
+        items:
+          $ref: '#/definitions/swagger.QMatch'
+        type: array
+      match:
+        description: 且匹配
+        items:
+          $ref: '#/definitions/swagger.QMatch'
+        type: array
+      match_one:
+        description: 或匹配
+        items:
+          $ref: '#/definitions/swagger.QMatch'
+        type: array
+      multi_match:
+        description: 多字段匹配
+        items:
+          $ref: '#/definitions/swagger.QMultiMatch'
+        type: array
+      not:
+        description: 非匹配
+        items:
+          $ref: '#/definitions/swagger.QMatch'
+        type: array
+      page:
+        $ref: '#/definitions/swagger.QPage'
+        description: 分页
+      range:
+        description: 范围
+        items:
+          $ref: '#/definitions/swagger.QRange'
+        type: array
+      size:
+        $ref: '#/definitions/swagger.QSize'
+        description: 大小
+      sort:
+        description: 排序
+        items:
+          $ref: '#/definitions/swagger.QSort'
+        type: array
+    type: object
+  swagger.QueryCache:
+    properties:
+      cache_count:
+        type: integer
+      cache_size:
+        type: integer
+      evictions:
+        type: integer
+      hit_count:
+        type: integer
+      memory_size_in_bytes:
+        type: integer
+      miss_count:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  swagger.Recovery:
+    properties:
+      current_as_source:
+        type: integer
+      current_as_target:
+        type: integer
+      throttle_time_in_millis:
+        type: integer
+    type: object
+  swagger.Refresh:
+    properties:
+      listeners:
+        type: integer
+      total:
+        type: integer
+      total_time_in_millis:
+        type: integer
+    type: object
+  swagger.RequestCache:
+    properties:
+      evictions:
+        type: integer
+      hit_count:
+        type: integer
+      memory_size_in_bytes:
+        type: integer
+      miss_count:
+        type: integer
+    type: object
+  swagger.Segments:
+    properties:
+      count:
+        type: integer
+      doc_values_memory_in_bytes:
+        type: integer
+      file_sizes:
+        $ref: '#/definitions/swagger.FileSizes'
+      fixed_bit_set_memory_in_bytes:
+        type: integer
+      index_writer_memory_in_bytes:
+        type: integer
+      max_unsafe_auto_id_timestamp:
+        type: integer
+      memory_in_bytes:
+        type: integer
+      norms_memory_in_bytes:
+        type: integer
+      points_memory_in_bytes:
+        type: integer
+      stored_fields_memory_in_bytes:
+        type: integer
+      term_vectors_memory_in_bytes:
+        type: integer
+      terms_memory_in_bytes:
+        type: integer
+      version_map_memory_in_bytes:
+        type: integer
+    type: object
+  swagger.ServerResponse:
+    properties:
+      error:
+        description: 错误描述
+      id:
+        description: 请求标识
+        type: integer
+      result:
+        description: 返回结果
+    type: object
+  swagger.ServerStatus:
+    properties:
+      coin:
+        description: 币名称
+        type: string
+      conv_seq:
+        description: 转换序列高度
+        type: integer
+      sync_seq:
+        description: 同步序列高度
+        type: integer
+      title:
+        description: 标题
+        type: string
+      version:
+        description: 版本
+        type: string
+    type: object
+  swagger.Status:
+    properties:
+      chain:
+        $ref: '#/definitions/swagger.ChainStatus'
+        description: 链状态
+      es:
+        $ref: '#/definitions/swagger.EsStatus'
+        description: ElasticSearch状态
+      server:
+        $ref: '#/definitions/swagger.ServerStatus'
+        description: 服务状态
+    type: object
+  swagger.Store:
+    properties:
+      size_in_bytes:
+        type: integer
+    type: object
+  swagger.SubTermsAgges:
+    properties:
+      count:
+        description: 聚合数量
+        type: integer
+      subTermsAggKey:
+        description: 子聚合键值
+        type: string
+    type: object
+  swagger.Survivor:
+    properties:
+      max_in_bytes:
+        type: integer
+      peak_max_in_bytes:
+        type: integer
+      peak_used_in_bytes:
+        type: integer
+      used_in_bytes:
+        type: integer
+    type: object
+  swagger.Swap:
+    properties:
+      free_in_bytes:
+        type: integer
+      total_in_bytes:
+        type: integer
+      used_in_bytes:
+        type: integer
+    type: object
+  swagger.Template:
+    properties:
+      template_block_hash:
+        description: 区块哈希
+        type: string
+      template_block_time:
+        description: 上链时间
+        type: integer
+      template_data:
+        description: 模板数据
+        type: string
+      template_deleted:
+        description: 删除交易哈希
+        type: string
+      template_deleted_flag:
+        description: 删除标志
+        type: boolean
+      template_deleted_note:
+        description: 删除备注
+        type: string
+      template_height:
+        description: 高度
+        type: integer
+      template_height_index:
+        description: 高度索引
+        type: integer
+      template_id:
+        description: 模板id
+        type: string
+      template_name:
+        description: 模板名称
+        type: string
+      template_organization:
+        description: 组织
+        type: string
+      template_sender:
+        description: 交易发送人
+        type: string
+      template_tx_hash:
+        description: 交易哈希
+        type: string
+    type: object
+  swagger.TermsAgg:
+    properties:
+      count:
+        description: 数量
+        type: integer
+      subTermsAgges:
+        description: 子聚合
+        items:
+          $ref: '#/definitions/swagger.SubTermsAgges'
+        type: array
+      termsAggKey:
+        description: 聚合键值
+        type: string
+    type: object
+  swagger.Threads:
+    properties:
+      count:
+        type: integer
+      peak_count:
+        type: integer
+    type: object
+  swagger.Translog:
+    properties:
+      operations:
+        type: integer
+      size_in_bytes:
+        type: integer
+      uncommitted_operations:
+        type: integer
+      uncommitted_size_in_bytes:
+        type: integer
+    type: object
+  swagger.VolunteerStats:
+    properties:
+      count:
+        description: 总数
+        type: integer
+      termsAgges:
+        description: 聚合
+        items:
+          $ref: '#/definitions/swagger.TermsAgg'
+        type: array
+    type: object
+  swagger.VolunteerStatsResult:
+    properties:
+      error:
+        description: 错误描述
+      id:
+        description: 请求标识
+        type: integer
+      result:
+        $ref: '#/definitions/swagger.VolunteerStats'
+        description: 返回结果
+    type: object
+  swagger.Warmer:
+    properties:
+      current:
+        type: integer
+      total:
+        type: integer
+      total_time_in_millis:
+        type: integer
+    type: object
+host: 'localhost:'
+info:
+  contact: {}
+  description: This is a rpc service for proof system
+  termsOfService: https://chain.33.cn/
+  title: externaldb-rpc
+  version: "1.0"
+paths:
+  /v1/LastSeq:
+    post:
+      description: get last sequence
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/swagger.ClientRequestNil'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/rpcutils.RepLastSeq'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取当前最新同步以及解析的区块序列号
+      tags:
+      - Comm
+  /v1/evm/Count:
+    post:
+      description: get evm count of organization/sender
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  type: integer
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 查询通证数量
+      tags:
+      - EVM
+  /v1/evm/List:
+    post:
+      description: list evm token
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.ListEVMResult'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 查询通证列表
+      tags:
+      - EVM
+  /v1/evm/nft/account/Count:
+    post:
+      description: get account count
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  type: integer
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 查询账户信息数量
+      tags:
+      - EVM
+  /v1/evm/nft/account/List:
+    post:
+      description: list evm account
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.ListEVMResult'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 查询账户信息列表
+      tags:
+      - EVM
+  /v1/evm/nft/transfer/Count:
+    post:
+      description: get transfer count
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  type: integer
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 查询转账数量
+      tags:
+      - EVM
+  /v1/evm/nft/transfer/List:
+    post:
+      description: list evm transfer
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.ListEVMResult'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 查询转账列表
+      tags:
+      - EVM
+  /v1/file-clean-cache:
+    get:
+      description: clean file cache
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: 清理文件缓存
+      tags:
+      - File
+  /v1/file/{hash}:
+    get:
+      description: get file
+      parameters:
+      - description: 文件哈希
+        in: query
+        name: hash
+        required: true
+        type: string
+      - description: 文件名称
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: integer
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: 获取上链文件
+      tags:
+      - File
+  /v1/health:
+    post:
+      description: get server running state and version(这是一个说明)
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/swagger.ClientRequestNil'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/swagger.Health'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取服务运行状态和版本
+      tags:
+      - Comm
+  /v1/proof/Count:
+    post:
+      description: get proof count
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  type: integer
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取存证数量
+      tags:
+      - Proof
+  /v1/proof/CountByTime:
+    post:
+      description: get proof count with time
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/rpcutils.CountByTime'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.ServerResponse'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 根据年/月/日对存证的数量进行统计
+      tags:
+      - Proof
+  /v1/proof/DonationStats:
+    post:
+      description: get donation stats
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/rpcutils.DonationStats'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/swagger.DonationStats'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取捐款排名信息
+      tags:
+      - Proof
+  /v1/proof/FetchSource:
+    post:
+      description: get specified fields of match
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/rpcutils.SpecifiedFields'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  items:
+                    type: string
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取满足条件的数据的指定字段的值
+      tags:
+      - Proof
+  /v1/proof/GetProofs:
+    post:
+      description: get proof by hashes
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/rpcutils.Hashes'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.ListProofResult'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取多个指定hash的存证信息
+      tags:
+      - Proof
+  /v1/proof/GetTemplates:
+    post:
+      description: get proof template by hashes
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/rpcutils.Hashes'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  items:
+                    $ref: '#/definitions/swagger.Template'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取多个指定hash的存证模板
+      tags:
+      - Proof
+  /v1/proof/Gets:
+    post:
+      description: get proof by hashes
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/rpcutils.Hashes'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.ListProofResult'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取多个指定hash的存证信息
+      tags:
+      - Proof
+  /v1/proof/List:
+    post:
+      description: list proof of organization/sender
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.ListProofResult'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取存证列表
+      tags:
+      - Proof
+  /v1/proof/ListUpdateProof:
+    post:
+      description: list proof of organization/sender
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.ListProofResult'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取最新存证列表
+      tags:
+      - Proof
+  /v1/proof/ListUpdateRecord:
+    post:
+      description: list update proof record of organization/sender
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.ListProofResult'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取存证更新记录的列表
+      tags:
+      - Proof
+  /v1/proof/QueryStatsInfo:
+    post:
+      description: get donation stats info
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/swagger.ClientRequestNil'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  items:
+                    type: string
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取统计项信息
+      tags:
+      - Proof
+  /v1/proof/Show:
+    post:
+      description: get proof by txhash
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.ListProofResult'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获得指定hash的存证信息
+      tags:
+      - Proof
+  /v1/proof/TotalStats:
+    post:
+      description: get sum of match
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/rpcutils.TotalStats'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/rpcutils.ServerResponse'
+            - properties:
+                result:
+                  type: number
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/rpcutils.ServerResponse'
+      summary: 获取满足条件的数据的指定字段的总值
+      tags:
+      - Proof
+  /v1/proof/VolunteerStats:
+    post:
+      description: get volunteer statistics
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/rpcutils.VolunteerStats'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/swagger.VolunteerStatsResult'
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取志愿者的分布图按照省/单位
+      tags:
+      - Proof
+  /v1/proofmember/Count:
+    post:
+      consumes:
+      - application/json
+      description: count proofmember by organization
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  type: integer
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获得指定范围的用户的数量
+      tags:
+      - proofmember
+  /v1/proofmember/Gets:
+    post:
+      consumes:
+      - application/json
+      description: proofmember by addresses
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/rpcutils.Addresses'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  items:
+                    $ref: '#/definitions/swagger.Member'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获得指定地址的用户
+      tags:
+      - proofmember
+  /v1/proofmember/List:
+    post:
+      consumes:
+      - application/json
+      description: get proofmember by organization
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  items:
+                    $ref: '#/definitions/swagger.Member'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 分页列出指定范围的用户
+      tags:
+      - proofmember
+  /v1/prooforganization/Count:
+    post:
+      consumes:
+      - application/json
+      description: get proof organization count
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  type: integer
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获得指定范围的组织的数量
+      tags:
+      - prooforganization
+  /v1/prooforganization/Gets:
+    post:
+      consumes:
+      - application/json
+      description: get proof organization info
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/rpcutils.Organizations'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  items:
+                    $ref: '#/definitions/swagger.Organization'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获得指定的组织的信息
+      tags:
+      - prooforganization
+  /v1/prooforganization/List:
+    post:
+      consumes:
+      - application/json
+      description: get proof organization
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          allOf:
+          - $ref: '#/definitions/swagger.ClientRequest'
+          - properties:
+              params:
+                items:
+                  $ref: '#/definitions/swagger.Query'
+                type: array
+            type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  items:
+                    $ref: '#/definitions/swagger.Organization'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 分页列出指定范围的组织
+      tags:
+      - prooforganization
+  /v1/status:
+    post:
+      description: get server status in detail
+      parameters:
+      - description: INPUT
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/swagger.ClientRequestNil'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/swagger.Status'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            allOf:
+            - $ref: '#/definitions/swagger.ServerResponse'
+            - properties:
+                error:
+                  type: string
+              type: object
+      summary: 获取服务详细状态信息
+      tags:
+      - Comm
+swagger: "2.0"

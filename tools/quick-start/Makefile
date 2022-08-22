@@ -5,8 +5,8 @@ quickStart:
 	@echo "================start initES================"
 	@bash es-init.sh
 	@echo "==============waiting es start=============="
-	@until [ `curl -o /dev/null -s -w %{http_code} http://localhost:${ES_PORT_HTTP}` = 200 ]; do \
-    		sleep 1s; \
+	@until [ `curl -o /dev/null -s -w %{http_code} http://localhost:${ES_PORT_HTTP} -u elastic:${ES_PASSWORD}` = 200 ]; do \
+        		sleep 1s; \
     done
 	@echo "==============start initConfig=============="
 	@bash alter-config.sh

@@ -1,0 +1,3960 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is a rpc service for proof system",
+        "title": "externaldb-rpc",
+        "termsOfService": "https://chain.33.cn/",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:",
+    "basePath": "/",
+    "paths": {
+        "/v1/LastSeq": {
+            "post": {
+                "description": "get last sequence",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Comm"
+                ],
+                "summary": "获取当前最新同步以及解析的区块序列号",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ClientRequestNil"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/rpcutils.RepLastSeq"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/evm/Count": {
+            "post": {
+                "description": "get evm count of organization/sender",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EVM"
+                ],
+                "summary": "查询通证数量",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/evm/List": {
+            "post": {
+                "description": "list evm token",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EVM"
+                ],
+                "summary": "查询通证列表",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ListEVMResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/evm/nft/account/Count": {
+            "post": {
+                "description": "get account count",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EVM"
+                ],
+                "summary": "查询账户信息数量",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/evm/nft/account/List": {
+            "post": {
+                "description": "list evm account",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EVM"
+                ],
+                "summary": "查询账户信息列表",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ListEVMResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/evm/nft/transfer/Count": {
+            "post": {
+                "description": "get transfer count",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EVM"
+                ],
+                "summary": "查询转账数量",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/evm/nft/transfer/List": {
+            "post": {
+                "description": "list evm transfer",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "EVM"
+                ],
+                "summary": "查询转账列表",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ListEVMResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/file-clean-cache": {
+            "get": {
+                "description": "clean file cache",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "File"
+                ],
+                "summary": "清理文件缓存",
+                "responses": {
+                    "200": {
+                        "description": "ok",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/file/{hash}": {
+            "get": {
+                "description": "get file",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "File"
+                ],
+                "summary": "获取上链文件",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "文件哈希",
+                        "name": "hash",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "文件名称",
+                        "name": "name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/health": {
+            "post": {
+                "description": "get server running state and version(这是一个说明)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Comm"
+                ],
+                "summary": "获取服务运行状态和版本",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ClientRequestNil"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/swagger.Health"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/Count": {
+            "post": {
+                "description": "get proof count",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取存证数量",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/CountByTime": {
+            "post": {
+                "description": "get proof count with time",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "根据年/月/日对存证的数量进行统计",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rpcutils.CountByTime"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ServerResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/DonationStats": {
+            "post": {
+                "description": "get donation stats",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取捐款排名信息",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rpcutils.DonationStats"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/swagger.DonationStats"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/FetchSource": {
+            "post": {
+                "description": "get specified fields of match",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取满足条件的数据的指定字段的值",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rpcutils.SpecifiedFields"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/GetProofs": {
+            "post": {
+                "description": "get proof by hashes",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取多个指定hash的存证信息",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rpcutils.Hashes"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ListProofResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/GetTemplates": {
+            "post": {
+                "description": "get proof template by hashes",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取多个指定hash的存证模板",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rpcutils.Hashes"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Template"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/Gets": {
+            "post": {
+                "description": "get proof by hashes",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取多个指定hash的存证信息",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rpcutils.Hashes"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ListProofResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/List": {
+            "post": {
+                "description": "list proof of organization/sender",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取存证列表",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ListProofResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/ListUpdateProof": {
+            "post": {
+                "description": "list proof of organization/sender",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取最新存证列表",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ListProofResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/ListUpdateRecord": {
+            "post": {
+                "description": "list update proof record of organization/sender",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取存证更新记录的列表",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ListProofResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/QueryStatsInfo": {
+            "post": {
+                "description": "get donation stats info",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取统计项信息",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ClientRequestNil"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/Show": {
+            "post": {
+                "description": "get proof by txhash",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获得指定hash的存证信息",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ListProofResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/TotalStats": {
+            "post": {
+                "description": "get sum of match",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取满足条件的数据的指定字段的总值",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rpcutils.TotalStats"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/rpcutils.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "number"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/rpcutils.ServerResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proof/VolunteerStats": {
+            "post": {
+                "description": "get volunteer statistics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Proof"
+                ],
+                "summary": "获取志愿者的分布图按照省/单位",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rpcutils.VolunteerStats"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/swagger.VolunteerStatsResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proofmember/Count": {
+            "post": {
+                "description": "count proofmember by organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "proofmember"
+                ],
+                "summary": "获得指定范围的用户的数量",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proofmember/Gets": {
+            "post": {
+                "description": "proofmember by addresses",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "proofmember"
+                ],
+                "summary": "获得指定地址的用户",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rpcutils.Addresses"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Member"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/proofmember/List": {
+            "post": {
+                "description": "get proofmember by organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "proofmember"
+                ],
+                "summary": "分页列出指定范围的用户",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Member"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/prooforganization/Count": {
+            "post": {
+                "description": "get proof organization count",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "prooforganization"
+                ],
+                "summary": "获得指定范围的组织的数量",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/prooforganization/Gets": {
+            "post": {
+                "description": "get proof organization info",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "prooforganization"
+                ],
+                "summary": "获得指定的组织的信息",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/rpcutils.Organizations"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Organization"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/prooforganization/List": {
+            "post": {
+                "description": "get proof organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "prooforganization"
+                ],
+                "summary": "分页列出指定范围的组织",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ClientRequest"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "params": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Query"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/swagger.Organization"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/status": {
+            "post": {
+                "description": "get server status in detail",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Comm"
+                ],
+                "summary": "获取服务详细状态信息",
+                "parameters": [
+                    {
+                        "description": "INPUT",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/swagger.ClientRequestNil"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/swagger.Status"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/swagger.ServerResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "rpcutils.Addresses": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "地址列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "rpcutils.CountByTime": {
+            "type": "object",
+            "properties": {
+                "match": {
+                    "description": "匹配条件",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rpcutils.QMatch"
+                    }
+                },
+                "ranges": {
+                    "description": "范围",
+                    "$ref": "#/definitions/rpcutils.QRanges"
+                }
+            }
+        },
+        "rpcutils.DonationStats": {
+            "type": "object",
+            "properties": {
+                "match": {
+                    "description": "匹配条件",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rpcutils.QMatch"
+                    }
+                },
+                "subSumAgg": {
+                    "description": "子聚合字段",
+                    "$ref": "#/definitions/rpcutils.QMatchKey"
+                },
+                "termsAgg": {
+                    "description": "聚合字段",
+                    "$ref": "#/definitions/rpcutils.QMatchKey"
+                }
+            }
+        },
+        "rpcutils.Hashes": {
+            "type": "object",
+            "properties": {
+                "hash": {
+                    "description": "哈希列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "rpcutils.Organizations": {
+            "type": "object",
+            "properties": {
+                "organization": {
+                    "description": "组织列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "rpcutils.QMatch": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "description": "字段名",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "值"
+                }
+            }
+        },
+        "rpcutils.QMatchKey": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "description": "字段名",
+                    "type": "string"
+                }
+            }
+        },
+        "rpcutils.QRanges": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "description": "字段名",
+                    "type": "string"
+                },
+                "ranges": {
+                    "description": "范围",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rpcutils.Range"
+                    }
+                }
+            }
+        },
+        "rpcutils.QSort": {
+            "type": "object",
+            "properties": {
+                "ascending": {
+                    "description": "是否升序",
+                    "type": "boolean"
+                },
+                "key": {
+                    "description": "字段名",
+                    "type": "string"
+                }
+            }
+        },
+        "rpcutils.Range": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "description": "结束位置（小于等于）"
+                },
+                "start": {
+                    "description": "开始位置（大于等于）"
+                }
+            }
+        },
+        "rpcutils.RepLastSeq": {
+            "type": "object",
+            "properties": {
+                "lastConvertSeq": {
+                    "description": "最新解析区块高度",
+                    "type": "integer"
+                },
+                "lastSyncSeq": {
+                    "description": "最新同步区块高度",
+                    "type": "integer"
+                }
+            }
+        },
+        "rpcutils.ServerResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "错误描述"
+                },
+                "id": {
+                    "description": "请求标识",
+                    "type": "integer"
+                },
+                "result": {
+                    "description": "返回结果"
+                }
+            }
+        },
+        "rpcutils.SpecifiedFields": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "总量",
+                    "type": "integer"
+                },
+                "fields": {
+                    "description": "字段列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "match": {
+                    "description": "匹配条件",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rpcutils.QMatch"
+                    }
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rpcutils.QSort"
+                    }
+                }
+            }
+        },
+        "rpcutils.TotalStats": {
+            "type": "object",
+            "properties": {
+                "match": {
+                    "description": "匹配条件",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rpcutils.QMatch"
+                    }
+                },
+                "sumAgg": {
+                    "description": "聚合字段",
+                    "$ref": "#/definitions/rpcutils.QMatchKey"
+                }
+            }
+        },
+        "rpcutils.VolunteerStats": {
+            "type": "object",
+            "properties": {
+                "match": {
+                    "description": "匹配条件",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rpcutils.QMatch"
+                    }
+                },
+                "subSumAgg": {
+                    "description": "子统计字段",
+                    "$ref": "#/definitions/rpcutils.QMatchKey"
+                },
+                "subTermsAgg": {
+                    "description": "子组合字段",
+                    "$ref": "#/definitions/rpcutils.QMatchKey"
+                },
+                "termsAgg": {
+                    "description": "聚合字段",
+                    "$ref": "#/definitions/rpcutils.QMatchKey"
+                }
+            }
+        },
+        "swagger.Attributes": {
+            "type": "object",
+            "properties": {
+                "ml.enabled": {
+                    "type": "string"
+                },
+                "ml.machine_memory": {
+                    "type": "string"
+                },
+                "ml.max_open_jobs": {
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.BufferPools": {
+            "type": "object",
+            "properties": {
+                "direct": {
+                    "$ref": "#/definitions/swagger.Direct"
+                },
+                "mapped": {
+                    "$ref": "#/definitions/swagger.Mapped"
+                }
+            }
+        },
+        "swagger.CPU": {
+            "type": "object",
+            "properties": {
+                "load_average": {
+                    "$ref": "#/definitions/swagger.LoadAverage"
+                },
+                "percent": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.ChainStatus": {
+            "type": "object",
+            "properties": {
+                "coin": {
+                    "description": "主代币信息",
+                    "type": "string"
+                },
+                "push_seq": {
+                    "description": "推送高度",
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "状态",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "版本",
+                    "$ref": "#/definitions/swagger.ChainVersionInfo"
+                }
+            }
+        },
+        "swagger.ChainVersionInfo": {
+            "type": "object",
+            "properties": {
+                "app": {
+                    "description": "应用 app 的版本",
+                    "type": "string"
+                },
+                "chain33": {
+                    "description": "版本信息，版本号-GitCommit（前八个字符）",
+                    "type": "string"
+                },
+                "localDb": {
+                    "description": "localdb 版本号",
+                    "type": "string"
+                },
+                "title": {
+                    "description": "区块链名，该节点 chain33.toml 中配置的 title 值",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.Classes": {
+            "type": "object",
+            "properties": {
+                "current_loaded_count": {
+                    "type": "integer"
+                },
+                "total_loaded_count": {
+                    "type": "integer"
+                },
+                "total_unloaded_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.ClientRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "请求标识",
+                    "type": "integer"
+                },
+                "method": {
+                    "description": "方法",
+                    "type": "string"
+                },
+                "params": {
+                    "description": "参数"
+                }
+            }
+        },
+        "swagger.ClientRequestNil": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "请求标识",
+                    "type": "integer"
+                },
+                "method": {
+                    "description": "方法",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.Collectors": {
+            "type": "object",
+            "properties": {
+                "old": {
+                    "$ref": "#/definitions/swagger.GcOld"
+                },
+                "young": {
+                    "$ref": "#/definitions/swagger.GcYoung"
+                }
+            }
+        },
+        "swagger.Completion": {
+            "type": "object",
+            "properties": {
+                "size_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Direct": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "total_capacity_in_bytes": {
+                    "type": "integer"
+                },
+                "used_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Docs": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "deleted": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.DonationStatItem": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "数量",
+                    "type": "integer"
+                },
+                "name": {
+                    "description": "名称",
+                    "type": "string"
+                },
+                "total": {
+                    "description": "总合",
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.DonationStats": {
+            "type": "object",
+            "properties": {
+                "itemes": {
+                    "description": "列表",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.DonationStatItem"
+                    }
+                }
+            }
+        },
+        "swagger.EVMToken": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "金额",
+                    "type": "integer"
+                },
+                "call_func_name": {
+                    "description": "调用方法名称",
+                    "type": "string"
+                },
+                "contract_addr": {
+                    "description": "合约地址",
+                    "type": "string"
+                },
+                "contract_used_gas": {
+                    "description": "消耗gas",
+                    "type": "integer"
+                },
+                "evm_block_hash": {
+                    "description": "区块hash",
+                    "type": "string"
+                },
+                "evm_block_time": {
+                    "description": "上链时间",
+                    "type": "integer"
+                },
+                "evm_events": {
+                    "description": "evm事件",
+                    "type": "string"
+                },
+                "evm_height": {
+                    "description": "区块高度",
+                    "type": "integer"
+                },
+                "evm_height_index": {
+                    "description": "高度索引",
+                    "type": "integer"
+                },
+                "evm_note": {
+                    "description": "备注信息",
+                    "type": "string"
+                },
+                "evm_param": {
+                    "description": "evm调用参数",
+                    "type": "string"
+                },
+                "evm_tx_hash": {
+                    "description": "交易hash",
+                    "type": "string"
+                },
+                "goods_id": {
+                    "description": "物品唯一标识",
+                    "type": "integer"
+                },
+                "goods_type": {
+                    "description": "物品类型",
+                    "type": "integer"
+                },
+                "label_id": {
+                    "description": "物品标签id",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "物品名称",
+                    "type": "string"
+                },
+                "owner": {
+                    "description": "拥有者",
+                    "type": "string"
+                },
+                "publish_time": {
+                    "description": "发布时间",
+                    "type": "integer"
+                },
+                "publisher": {
+                    "description": "发布者",
+                    "type": "string"
+                },
+                "remark": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "source_hash": {
+                    "description": "关联交易hash",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "trace_hash": {
+                    "description": "关联溯源hash",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "swagger.EsStatus": {
+            "type": "object",
+            "properties": {
+                "_nodes": {
+                    "description": "节点数量信息",
+                    "$ref": "#/definitions/swagger.NodesCount"
+                },
+                "cluster_name": {
+                    "description": "集群名",
+                    "type": "string"
+                },
+                "nodes": {
+                    "description": "节点信息",
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/swagger.Node"
+                    }
+                },
+                "status": {
+                    "description": "状态",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.Fielddata": {
+            "type": "object",
+            "properties": {
+                "evictions": {
+                    "type": "integer"
+                },
+                "memory_size_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.FileSizes": {
+            "type": "object"
+        },
+        "swagger.Flush": {
+            "type": "object",
+            "properties": {
+                "total": {
+                    "type": "integer"
+                },
+                "total_time_in_millis": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Gc": {
+            "type": "object",
+            "properties": {
+                "collectors": {
+                    "$ref": "#/definitions/swagger.Collectors"
+                }
+            }
+        },
+        "swagger.GcOld": {
+            "type": "object",
+            "properties": {
+                "collection_count": {
+                    "type": "integer"
+                },
+                "collection_time_in_millis": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.GcYoung": {
+            "type": "object",
+            "properties": {
+                "collection_count": {
+                    "type": "integer"
+                },
+                "collection_time_in_millis": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Get": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer"
+                },
+                "exists_time_in_millis": {
+                    "type": "integer"
+                },
+                "exists_total": {
+                    "type": "integer"
+                },
+                "missing_time_in_millis": {
+                    "type": "integer"
+                },
+                "missing_total": {
+                    "type": "integer"
+                },
+                "time_in_millis": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.HTTP": {
+            "type": "object",
+            "properties": {
+                "current_open": {
+                    "type": "integer"
+                },
+                "total_opened": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Health": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "description": "状态",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "版本",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.ISearch": {
+            "type": "object",
+            "properties": {
+                "fetch_current": {
+                    "type": "integer"
+                },
+                "fetch_time_in_millis": {
+                    "type": "integer"
+                },
+                "fetch_total": {
+                    "type": "integer"
+                },
+                "open_contexts": {
+                    "type": "integer"
+                },
+                "query_current": {
+                    "type": "integer"
+                },
+                "query_time_in_millis": {
+                    "type": "integer"
+                },
+                "query_total": {
+                    "type": "integer"
+                },
+                "scroll_current": {
+                    "type": "integer"
+                },
+                "scroll_time_in_millis": {
+                    "type": "integer"
+                },
+                "scroll_total": {
+                    "type": "integer"
+                },
+                "suggest_current": {
+                    "type": "integer"
+                },
+                "suggest_time_in_millis": {
+                    "type": "integer"
+                },
+                "suggest_total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Indexing": {
+            "type": "object",
+            "properties": {
+                "delete_current": {
+                    "type": "integer"
+                },
+                "delete_time_in_millis": {
+                    "type": "integer"
+                },
+                "delete_total": {
+                    "type": "integer"
+                },
+                "index_current": {
+                    "type": "integer"
+                },
+                "index_failed": {
+                    "type": "integer"
+                },
+                "index_time_in_millis": {
+                    "type": "integer"
+                },
+                "index_total": {
+                    "type": "integer"
+                },
+                "is_throttled": {
+                    "type": "boolean"
+                },
+                "noop_update_total": {
+                    "type": "integer"
+                },
+                "throttle_time_in_millis": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Indices": {
+            "type": "object",
+            "properties": {
+                "completion": {
+                    "$ref": "#/definitions/swagger.Completion"
+                },
+                "docs": {
+                    "$ref": "#/definitions/swagger.Docs"
+                },
+                "fielddata": {
+                    "$ref": "#/definitions/swagger.Fielddata"
+                },
+                "flush": {
+                    "$ref": "#/definitions/swagger.Flush"
+                },
+                "get": {
+                    "$ref": "#/definitions/swagger.Get"
+                },
+                "indexing": {
+                    "$ref": "#/definitions/swagger.Indexing"
+                },
+                "merges": {
+                    "$ref": "#/definitions/swagger.Merges"
+                },
+                "query_cache": {
+                    "$ref": "#/definitions/swagger.QueryCache"
+                },
+                "recovery": {
+                    "$ref": "#/definitions/swagger.Recovery"
+                },
+                "refresh": {
+                    "$ref": "#/definitions/swagger.Refresh"
+                },
+                "request_cache": {
+                    "$ref": "#/definitions/swagger.RequestCache"
+                },
+                "search": {
+                    "$ref": "#/definitions/swagger.ISearch"
+                },
+                "segments": {
+                    "$ref": "#/definitions/swagger.Segments"
+                },
+                "store": {
+                    "$ref": "#/definitions/swagger.Store"
+                },
+                "translog": {
+                    "$ref": "#/definitions/swagger.Translog"
+                },
+                "warmer": {
+                    "$ref": "#/definitions/swagger.Warmer"
+                }
+            }
+        },
+        "swagger.Jvm": {
+            "type": "object",
+            "properties": {
+                "buffer_pools": {
+                    "$ref": "#/definitions/swagger.BufferPools"
+                },
+                "classes": {
+                    "$ref": "#/definitions/swagger.Classes"
+                },
+                "gc": {
+                    "$ref": "#/definitions/swagger.Gc"
+                },
+                "mem": {
+                    "$ref": "#/definitions/swagger.JvmMem"
+                },
+                "threads": {
+                    "$ref": "#/definitions/swagger.Threads"
+                },
+                "timestamp": {
+                    "type": "integer"
+                },
+                "uptime_in_millis": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.JvmMem": {
+            "type": "object",
+            "properties": {
+                "heap_committed_in_bytes": {
+                    "type": "integer"
+                },
+                "heap_max_in_bytes": {
+                    "type": "integer"
+                },
+                "heap_used_in_bytes": {
+                    "type": "integer"
+                },
+                "heap_used_percent": {
+                    "type": "integer"
+                },
+                "non_heap_committed_in_bytes": {
+                    "type": "integer"
+                },
+                "non_heap_used_in_bytes": {
+                    "type": "integer"
+                },
+                "pools": {
+                    "$ref": "#/definitions/swagger.Pools"
+                }
+            }
+        },
+        "swagger.ListEVMResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "错误描述"
+                },
+                "id": {
+                    "description": "请求标识",
+                    "type": "integer"
+                },
+                "result": {
+                    "description": "返回结果",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.EVMToken"
+                    }
+                }
+            }
+        },
+        "swagger.ListProofResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "错误描述"
+                },
+                "id": {
+                    "description": "请求标识",
+                    "type": "integer"
+                },
+                "result": {
+                    "description": "返回结果",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.Proof"
+                    }
+                }
+            }
+        },
+        "swagger.LoadAverage": {
+            "type": "object",
+            "properties": {
+                "15m": {
+                    "type": "number"
+                },
+                "1m": {
+                    "type": "number"
+                },
+                "5m": {
+                    "type": "number"
+                }
+            }
+        },
+        "swagger.Mapped": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "total_capacity_in_bytes": {
+                    "type": "integer"
+                },
+                "used_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Member": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "地址",
+                    "type": "string"
+                },
+                "auth_type": {
+                    "description": "认证类型",
+                    "type": "integer"
+                },
+                "block_hash": {
+                    "description": "区块哈希",
+                    "type": "string"
+                },
+                "email": {
+                    "description": "邮箱",
+                    "type": "string"
+                },
+                "enterprise_name": {
+                    "description": "企业名称",
+                    "type": "string"
+                },
+                "height": {
+                    "description": "高度",
+                    "type": "integer"
+                },
+                "height_index": {
+                    "description": "高度索引",
+                    "type": "integer"
+                },
+                "index": {
+                    "description": "交易索引号",
+                    "type": "integer"
+                },
+                "note": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "organization": {
+                    "description": "组织",
+                    "type": "string"
+                },
+                "phone": {
+                    "description": "手机号",
+                    "type": "string"
+                },
+                "real_name": {
+                    "description": "真实姓名",
+                    "type": "string"
+                },
+                "role": {
+                    "description": "角色",
+                    "type": "string"
+                },
+                "send": {
+                    "description": "交易发起人",
+                    "type": "string"
+                },
+                "ts": {
+                    "description": "上链时间",
+                    "type": "integer"
+                },
+                "tx_hash": {
+                    "description": "交易hash",
+                    "type": "string"
+                },
+                "user_icon": {
+                    "description": "头像地址链接",
+                    "type": "string"
+                },
+                "user_name": {
+                    "description": "用户名",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.Merges": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer"
+                },
+                "current_docs": {
+                    "type": "integer"
+                },
+                "current_size_in_bytes": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_auto_throttle_in_bytes": {
+                    "type": "integer"
+                },
+                "total_docs": {
+                    "type": "integer"
+                },
+                "total_size_in_bytes": {
+                    "type": "integer"
+                },
+                "total_stopped_time_in_millis": {
+                    "type": "integer"
+                },
+                "total_throttled_time_in_millis": {
+                    "type": "integer"
+                },
+                "total_time_in_millis": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Node": {
+            "type": "object",
+            "properties": {
+                "attributes": {
+                    "$ref": "#/definitions/swagger.Attributes"
+                },
+                "host": {
+                    "type": "string"
+                },
+                "http": {
+                    "$ref": "#/definitions/swagger.HTTP"
+                },
+                "indices": {
+                    "description": "索引",
+                    "$ref": "#/definitions/swagger.Indices"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "jvm": {
+                    "description": "java虚拟机",
+                    "$ref": "#/definitions/swagger.Jvm"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "os": {
+                    "description": "系统",
+                    "$ref": "#/definitions/swagger.Os"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "timestamp": {
+                    "type": "integer"
+                },
+                "transport_address": {
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.NodesCount": {
+            "type": "object",
+            "properties": {
+                "failed": {
+                    "description": "不正常数量",
+                    "type": "integer"
+                },
+                "successful": {
+                    "description": "正常数量",
+                    "type": "integer"
+                },
+                "total": {
+                    "description": "总计",
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Organization": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "数量",
+                    "type": "integer"
+                },
+                "note": {
+                    "description": "备注",
+                    "type": "string"
+                },
+                "organization": {
+                    "description": "组织名",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.Os": {
+            "type": "object",
+            "properties": {
+                "cpu": {
+                    "$ref": "#/definitions/swagger.CPU"
+                },
+                "mem": {
+                    "$ref": "#/definitions/swagger.OsMem"
+                },
+                "swap": {
+                    "$ref": "#/definitions/swagger.Swap"
+                },
+                "timestamp": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.OsMem": {
+            "type": "object",
+            "properties": {
+                "free_in_bytes": {
+                    "type": "integer"
+                },
+                "free_percent": {
+                    "type": "integer"
+                },
+                "total_in_bytes": {
+                    "type": "integer"
+                },
+                "used_in_bytes": {
+                    "type": "integer"
+                },
+                "used_percent": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Pools": {
+            "type": "object",
+            "properties": {
+                "old": {
+                    "$ref": "#/definitions/swagger.PoolsOld"
+                },
+                "survivor": {
+                    "$ref": "#/definitions/swagger.Survivor"
+                },
+                "young": {
+                    "$ref": "#/definitions/swagger.PoolsYoung"
+                }
+            }
+        },
+        "swagger.PoolsOld": {
+            "type": "object",
+            "properties": {
+                "max_in_bytes": {
+                    "type": "integer"
+                },
+                "peak_max_in_bytes": {
+                    "type": "integer"
+                },
+                "peak_used_in_bytes": {
+                    "type": "integer"
+                },
+                "used_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.PoolsYoung": {
+            "type": "object",
+            "properties": {
+                "max_in_bytes": {
+                    "type": "integer"
+                },
+                "peak_max_in_bytes": {
+                    "type": "integer"
+                },
+                "peak_used_in_bytes": {
+                    "type": "integer"
+                },
+                "used_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Proof": {
+            "type": "object",
+            "properties": {
+                "basehash": {
+                    "description": "增量存证依赖的主hash",
+                    "type": "string"
+                },
+                "evidenceName": {
+                    "description": "存证名称",
+                    "type": "string"
+                },
+                "prehash": {
+                    "description": "增量存证前一个hash",
+                    "type": "string"
+                },
+                "proof_block_hash": {
+                    "description": "区块hash",
+                    "type": "string"
+                },
+                "proof_block_time": {
+                    "description": "上链时间",
+                    "type": "integer"
+                },
+                "proof_data": {
+                    "description": "存证数据",
+                    "type": "string"
+                },
+                "proof_deleted": {
+                    "description": "删除存证交易hash",
+                    "type": "string"
+                },
+                "proof_deleted_flag": {
+                    "description": "删除标志",
+                    "type": "boolean"
+                },
+                "proof_deleted_note": {
+                    "description": "删除备注",
+                    "type": "string"
+                },
+                "proof_height": {
+                    "description": "存证高度",
+                    "type": "integer"
+                },
+                "proof_height_index": {
+                    "description": "存证高度索引",
+                    "type": "integer"
+                },
+                "proof_id": {
+                    "description": "存证id",
+                    "type": "string"
+                },
+                "proof_note": {
+                    "description": "存证备注",
+                    "type": "string"
+                },
+                "proof_organization": {
+                    "description": "组织",
+                    "type": "string"
+                },
+                "proof_original": {
+                    "description": "来源",
+                    "type": "string"
+                },
+                "proof_sender": {
+                    "description": "存证发起者",
+                    "type": "string"
+                },
+                "proof_tx_hash": {
+                    "description": "交易哈希",
+                    "type": "string"
+                },
+                "source_hash": {
+                    "description": "依赖交易哈希"
+                },
+                "update_hash": {
+                    "description": "更新依赖主哈希",
+                    "type": "string"
+                },
+                "update_version": {
+                    "description": "更新版本",
+                    "type": "integer"
+                },
+                "user_auth_type": {
+                    "description": "用户认证类型",
+                    "type": "integer"
+                },
+                "user_email": {
+                    "description": "用户邮箱",
+                    "type": "string"
+                },
+                "user_enterprise_name": {
+                    "description": "用户企业名称",
+                    "type": "string"
+                },
+                "user_icon": {
+                    "description": "用户头像链接地址",
+                    "type": "string"
+                },
+                "user_name": {
+                    "description": "用户名",
+                    "type": "string"
+                },
+                "user_phone": {
+                    "description": "用户手机号",
+                    "type": "string"
+                },
+                "user_real_name": {
+                    "description": "用户真是名称",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "存证版本",
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.QFetch": {
+            "type": "object",
+            "properties": {
+                "fetch_source": {
+                    "description": "是否获取",
+                    "type": "boolean"
+                },
+                "keys": {
+                    "description": "字段名列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "swagger.QMatch": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "description": "字段名",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "值"
+                }
+            }
+        },
+        "swagger.QMultiMatch": {
+            "type": "object",
+            "properties": {
+                "keys": {
+                    "description": "字段名列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "value": {
+                    "description": "值"
+                }
+            }
+        },
+        "swagger.QPage": {
+            "type": "object",
+            "properties": {
+                "number": {
+                    "description": "当前页数",
+                    "type": "integer"
+                },
+                "size": {
+                    "description": "大小",
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.QRange": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "description": "小于等于"
+                },
+                "gt": {
+                    "description": "大于"
+                },
+                "key": {
+                    "description": "字段名",
+                    "type": "string"
+                },
+                "lt": {
+                    "description": "小于"
+                },
+                "start": {
+                    "description": "大于等于"
+                }
+            }
+        },
+        "swagger.QSize": {
+            "type": "object",
+            "properties": {
+                "size": {
+                    "description": "大小",
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.QSort": {
+            "type": "object",
+            "properties": {
+                "ascending": {
+                    "description": "是否递增",
+                    "type": "boolean"
+                },
+                "key": {
+                    "description": "字段名",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.Query": {
+            "type": "object",
+            "properties": {
+                "fetch": {
+                    "description": "获取字段",
+                    "$ref": "#/definitions/swagger.QFetch"
+                },
+                "filter": {
+                    "description": "过滤",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.QMatch"
+                    }
+                },
+                "match": {
+                    "description": "且匹配",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.QMatch"
+                    }
+                },
+                "match_one": {
+                    "description": "或匹配",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.QMatch"
+                    }
+                },
+                "multi_match": {
+                    "description": "多字段匹配",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.QMultiMatch"
+                    }
+                },
+                "not": {
+                    "description": "非匹配",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.QMatch"
+                    }
+                },
+                "page": {
+                    "description": "分页",
+                    "$ref": "#/definitions/swagger.QPage"
+                },
+                "range": {
+                    "description": "范围",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.QRange"
+                    }
+                },
+                "size": {
+                    "description": "大小",
+                    "$ref": "#/definitions/swagger.QSize"
+                },
+                "sort": {
+                    "description": "排序",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.QSort"
+                    }
+                }
+            }
+        },
+        "swagger.QueryCache": {
+            "type": "object",
+            "properties": {
+                "cache_count": {
+                    "type": "integer"
+                },
+                "cache_size": {
+                    "type": "integer"
+                },
+                "evictions": {
+                    "type": "integer"
+                },
+                "hit_count": {
+                    "type": "integer"
+                },
+                "memory_size_in_bytes": {
+                    "type": "integer"
+                },
+                "miss_count": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Recovery": {
+            "type": "object",
+            "properties": {
+                "current_as_source": {
+                    "type": "integer"
+                },
+                "current_as_target": {
+                    "type": "integer"
+                },
+                "throttle_time_in_millis": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Refresh": {
+            "type": "object",
+            "properties": {
+                "listeners": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_time_in_millis": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.RequestCache": {
+            "type": "object",
+            "properties": {
+                "evictions": {
+                    "type": "integer"
+                },
+                "hit_count": {
+                    "type": "integer"
+                },
+                "memory_size_in_bytes": {
+                    "type": "integer"
+                },
+                "miss_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Segments": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "doc_values_memory_in_bytes": {
+                    "type": "integer"
+                },
+                "file_sizes": {
+                    "$ref": "#/definitions/swagger.FileSizes"
+                },
+                "fixed_bit_set_memory_in_bytes": {
+                    "type": "integer"
+                },
+                "index_writer_memory_in_bytes": {
+                    "type": "integer"
+                },
+                "max_unsafe_auto_id_timestamp": {
+                    "type": "integer"
+                },
+                "memory_in_bytes": {
+                    "type": "integer"
+                },
+                "norms_memory_in_bytes": {
+                    "type": "integer"
+                },
+                "points_memory_in_bytes": {
+                    "type": "integer"
+                },
+                "stored_fields_memory_in_bytes": {
+                    "type": "integer"
+                },
+                "term_vectors_memory_in_bytes": {
+                    "type": "integer"
+                },
+                "terms_memory_in_bytes": {
+                    "type": "integer"
+                },
+                "version_map_memory_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.ServerResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "错误描述"
+                },
+                "id": {
+                    "description": "请求标识",
+                    "type": "integer"
+                },
+                "result": {
+                    "description": "返回结果"
+                }
+            }
+        },
+        "swagger.ServerStatus": {
+            "type": "object",
+            "properties": {
+                "coin": {
+                    "description": "币名称",
+                    "type": "string"
+                },
+                "conv_seq": {
+                    "description": "转换序列高度",
+                    "type": "integer"
+                },
+                "sync_seq": {
+                    "description": "同步序列高度",
+                    "type": "integer"
+                },
+                "title": {
+                    "description": "标题",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "版本",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.Status": {
+            "type": "object",
+            "properties": {
+                "chain": {
+                    "description": "链状态",
+                    "$ref": "#/definitions/swagger.ChainStatus"
+                },
+                "es": {
+                    "description": "ElasticSearch状态",
+                    "$ref": "#/definitions/swagger.EsStatus"
+                },
+                "server": {
+                    "description": "服务状态",
+                    "$ref": "#/definitions/swagger.ServerStatus"
+                }
+            }
+        },
+        "swagger.Store": {
+            "type": "object",
+            "properties": {
+                "size_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.SubTermsAgges": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "聚合数量",
+                    "type": "integer"
+                },
+                "subTermsAggKey": {
+                    "description": "子聚合键值",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.Survivor": {
+            "type": "object",
+            "properties": {
+                "max_in_bytes": {
+                    "type": "integer"
+                },
+                "peak_max_in_bytes": {
+                    "type": "integer"
+                },
+                "peak_used_in_bytes": {
+                    "type": "integer"
+                },
+                "used_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Swap": {
+            "type": "object",
+            "properties": {
+                "free_in_bytes": {
+                    "type": "integer"
+                },
+                "total_in_bytes": {
+                    "type": "integer"
+                },
+                "used_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Template": {
+            "type": "object",
+            "properties": {
+                "template_block_hash": {
+                    "description": "区块哈希",
+                    "type": "string"
+                },
+                "template_block_time": {
+                    "description": "上链时间",
+                    "type": "integer"
+                },
+                "template_data": {
+                    "description": "模板数据",
+                    "type": "string"
+                },
+                "template_deleted": {
+                    "description": "删除交易哈希",
+                    "type": "string"
+                },
+                "template_deleted_flag": {
+                    "description": "删除标志",
+                    "type": "boolean"
+                },
+                "template_deleted_note": {
+                    "description": "删除备注",
+                    "type": "string"
+                },
+                "template_height": {
+                    "description": "高度",
+                    "type": "integer"
+                },
+                "template_height_index": {
+                    "description": "高度索引",
+                    "type": "integer"
+                },
+                "template_id": {
+                    "description": "模板id",
+                    "type": "string"
+                },
+                "template_name": {
+                    "description": "模板名称",
+                    "type": "string"
+                },
+                "template_organization": {
+                    "description": "组织",
+                    "type": "string"
+                },
+                "template_sender": {
+                    "description": "交易发送人",
+                    "type": "string"
+                },
+                "template_tx_hash": {
+                    "description": "交易哈希",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.TermsAgg": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "数量",
+                    "type": "integer"
+                },
+                "subTermsAgges": {
+                    "description": "子聚合",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.SubTermsAgges"
+                    }
+                },
+                "termsAggKey": {
+                    "description": "聚合键值",
+                    "type": "string"
+                }
+            }
+        },
+        "swagger.Threads": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "peak_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.Translog": {
+            "type": "object",
+            "properties": {
+                "operations": {
+                    "type": "integer"
+                },
+                "size_in_bytes": {
+                    "type": "integer"
+                },
+                "uncommitted_operations": {
+                    "type": "integer"
+                },
+                "uncommitted_size_in_bytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "swagger.VolunteerStats": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "description": "总数",
+                    "type": "integer"
+                },
+                "termsAgges": {
+                    "description": "聚合",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/swagger.TermsAgg"
+                    }
+                }
+            }
+        },
+        "swagger.VolunteerStatsResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "错误描述"
+                },
+                "id": {
+                    "description": "请求标识",
+                    "type": "integer"
+                },
+                "result": {
+                    "description": "返回结果",
+                    "$ref": "#/definitions/swagger.VolunteerStats"
+                }
+            }
+        },
+        "swagger.Warmer": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "total_time_in_millis": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}

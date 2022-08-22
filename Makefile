@@ -257,6 +257,7 @@ pkg-quickStart:
 	cp tools/quick-start/README.md externaldb-proof/
 	cp tools/quick-start/alter-config.sh externaldb-proof/
 	cp tools/quick-start/es-init.sh externaldb-proof/
+	cp tools/quick-start/browser-init.bash externaldb-proof/
 	cp .env externaldb-proof/
 	cp build/rpc build/sync_convert externaldb-proof/ex-merge/bin
 	cp config/externaldb_merge.toml externaldb-proof/ex-merge/etc/externaldb.toml

@@ -47,7 +47,7 @@ deal_browser_config(){
     set_key_value "openAccessControl" true
     set_key_value "saveBlockInfo" false
   else
-    sed -i "${start},${end}s/^#\s*//g" $CONF
+    sed -i "${start},${end}s/^#*\s*//g" $CONF
     set_key_value "openAccessControl" false
     set_key_value "saveBlockInfo" true
   fi
@@ -74,11 +74,14 @@ set_key_value "pushBind" \"${PUSH_BIND}\"
 set_key_value "pushHost" \"${PUSH_HOST}\"
 set_key_value "pushName" \"${PUSH_NAME}\"
 set_key_value "pushFormat" \"${PUSH_FORMAT}\"
+set_key_value "startSeq" ${START_SEQ} 58
+set_key_value "startHeight" ${START_HEIGHT}
 # rpc相关
 set_key_value "host" \"${RPC_HOST}\" 67
-set_key_value "host" \"${JRPC_HOST}\" 68
+set_key_value "jrpcHost" \"${JRPC_HOST}\"
 set_key_value "swaggerHost" \"${SWAGGER_HOST}\"
 # convert相关
 set_key_value "addressDriver" \"${ADDR_DRIVER}\"
+set_key_value "dealOtherChain" ${DEAL_OTHER_CHAIN}
 
 deal_browser_config

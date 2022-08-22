@@ -2,7 +2,7 @@ version: '2'
 
 services:
   sync:
-    container_name: ${SYNC_NAME}
+    container_name: ${PROJECT_NAME}-sync
     image: docker.io/ubuntu:16.04
     volumes:
       - ./bin/:/root/bin/
@@ -11,7 +11,7 @@ services:
     command: /root/bin/sync -f /root/etc/externaldb.toml &
 
   convert:
-    container_name: ${CONVERT_NAME}
+    container_name: ${PROJECT_NAME}-convert
     image: docker.io/ubuntu:16.04
     depends_on:
       - sync
@@ -22,7 +22,7 @@ services:
     command: /root/bin/convert -f /root/etc/externaldb.toml &
 
   rpc: # 存证项目使用
-    container_name: ${RPC_NAME}
+    container_name: ${PROJECT_NAME}-rpc
     image: docker.io/ubuntu:16.04
     volumes:
       - ./bin/:/root/bin/
@@ -32,7 +32,7 @@ services:
     command: /root/bin/rpc -f /root/etc/externaldb.toml &
 
   jrpc: # 浏览器项目使用
-    container_name: ${JRPC_NAME}
+    container_name: ${PROJECT_NAME}-jrpc
     image: docker.io/ubuntu:16.04
     volumes:
       - ./bin/:/root/bin/
