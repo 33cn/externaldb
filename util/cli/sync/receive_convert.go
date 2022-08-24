@@ -3,18 +3,16 @@ package sync
 import (
 	"github.com/33cn/chain33/common"
 	"github.com/33cn/chain33/types"
-	"github.com/pkg/errors"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/block"
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/proto"
 	"github.com/33cn/externaldb/util"
 	"github.com/33cn/externaldb/util/cli/convert"
+	"github.com/pkg/errors"
 
 	// 以下包导入不显示使用，主要使用里面的init函数，初始化一些配置，复制来源 cmd/convert/main.go 里面的导入逻辑
 	_ "github.com/33cn/chain33/system"
-	_ "github.com/33cn/plugin/plugin/dapp/init"
-	_ "github.com/33cn/plugin/plugin/store/init"
 	_ "github.com/33cn/externaldb/db/account"
 	_ "github.com/33cn/externaldb/db/coins"
 	_ "github.com/33cn/externaldb/db/evm"
@@ -32,6 +30,8 @@ import (
 	_ "github.com/33cn/externaldb/db/trade"
 	_ "github.com/33cn/externaldb/db/unfreeze"
 	_ "github.com/33cn/externaldb/stat/block"
+	_ "github.com/33cn/plugin/plugin/dapp/init"
+	_ "github.com/33cn/plugin/plugin/store/init"
 )
 
 type ReceiverConvert interface {
@@ -96,9 +96,9 @@ type receiverConvert struct {
 }
 
 func (r *receiverConvert) RecoverStats() error {
-	err := r.mod.RecoverStats(r.mod.WriteDB, LastSyncSeqCache.GetNumber())
+	err := r.mod.RecoverStats(r.mod.WriteDB, util.LastSyncSeqCache.GetNumber())
 	if err != nil {
-		log.Error("BlockProc RecoverStats", "err", err, "seq", LastSyncSeqCache.GetNumber(), "module", r.mod.Name)
+		log.Error("BlockProc RecoverStats", "err", err, "seq", util.LastSyncSeqCache.GetNumber(), "module", r.mod.Name)
 	}
 	return err
 }
@@ -143,7 +143,7 @@ func handleConvertRequest(body []byte, format string, mod *util.ModuleConvert, c
 	log.Info("parseSeqs", "seqsMap", seqsMap)
 	log.Info("parseSeqs", "cost", types.Since(beg), "count", count, "start", start)
 
-	currentSeqNum := LastSyncSeqCache.GetNumber()
+	currentSeqNum := util.LastSyncSeqCache.GetNumber()
 	// 在app 端保存成功， 但回复ok时，程序挂掉, 记录日志
 	log.Info("GetNumber", "current_seq", currentSeqNum)
 	if start+int64(count) <= currentSeqNum {
@@ -197,12 +197,12 @@ func handleConvertRequest(body []byte, format string, mod *util.ModuleConvert, c
 	log.Info("deal request over", "cost", types.Since(beg), "number", number, "bulkRecords", bulkRecords)
 
 	// 存入ES
-	err = util.SaveToESSelectBulk(mod.WriteDB, bulkRecords, ConvertEsBulk)
+	err = util.SaveToESSelectBulk(mod.WriteDB, bulkRecords, util.ConvertEsBulk)
 	if err != nil {
 		log.Error("SaveToESSelectBulk", "err", err, "bulkRecords", bulkRecords, "module", mod.Name, "op", "save")
 		return err
 	}
-	err = LastSyncSeqCache.SetNumber(number)
+	err = util.LastSyncSeqCache.SetNumber(number)
 
 	log.Info("response", "err", err)
 	return err

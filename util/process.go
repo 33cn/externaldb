@@ -49,7 +49,8 @@ func (mod *ModuleConvert) BlockProc() {
 		return
 	}
 	syncSeqNum := syncSeq.Number
-	currentSeqNum, err := LastSyncSeq(mod.WriteDB, mod.Name)
+	//currentSeqNum, err := LastSyncSeq(mod.WriteDB, mod.Name)
+	currentSeqNum := LastSyncSeqCache.GetNumber()
 	if err != nil {
 		time.Sleep(1 * time.Second)
 		log.Error("BlockProc LastSyncSeq2", "err", err, "module", mod.Name)
@@ -111,6 +112,7 @@ func (mod *ModuleConvert) BlockProc() {
 			time.Sleep(1 * time.Second)
 			continue
 		}
+		LastSyncSeqCache.SetNumber(currentSeqNum)
 		currentSeqNum = mod.SeqStore.CommitSeqAck(currentSeqNum)
 	}
 }

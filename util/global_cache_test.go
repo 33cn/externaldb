@@ -1,13 +1,13 @@
-package sync
+package util
 
 import (
 	"fmt"
 	"os"
 	"testing"
 
-	tml "github.com/BurntSushi/toml"
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/proto"
+	tml "github.com/BurntSushi/toml"
 )
 
 func TestInitLastSyncSeqCache(t *testing.T) {

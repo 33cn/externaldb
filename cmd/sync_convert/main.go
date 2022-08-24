@@ -14,13 +14,13 @@ import (
 	"strings"
 
 	l "github.com/33cn/chain33/common/log/log15"
-	tml "github.com/BurntSushi/toml"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/proto"
 	"github.com/33cn/externaldb/util"
 	"github.com/33cn/externaldb/util/cli/sync"
 	"github.com/33cn/externaldb/version"
+	tml "github.com/BurntSushi/toml"
 )
 
 var (
@@ -68,14 +68,14 @@ func main() {
 	}
 
 	// TODO db.LastSeqDB 待确定
-	err = sync.InitLastSyncSeqCache(EsWrite, db.LastSeqDB, cfg.Sync.StartSeq)
+	err = util.InitLastSyncSeqCache(EsWrite, db.LastSeqDB, cfg.Sync.StartSeq)
 	if err != nil {
 		log.Error("InitLastSyncSeqCache failed", "err", err.Error())
 		log.Error("初始化 区块解析进度参数 last_seq 失败，请确保ES服务正常且 配置文件参数sync.startSeq 参数大于或等于0")
 		return
 	}
 	// 初始化设置 convert流程的 ES 服务是否设置批量提交
-	sync.InitConvertEsBulk(cfg.ConvertEs.Bulk)
+	util.InitConvertEsBulk(cfg.ConvertEs.Bulk)
 
 	// 创建服务实例
 	receiver, err := sync.CreateReceiverConvert(cfg, EsWrite)
