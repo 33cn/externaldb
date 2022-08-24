@@ -37,7 +37,8 @@ echo ""
 curl -X DELETE http://localhost:${port}/${prefix}proof/proof/proof-create-proof-index -H "Content-Type: application/json" -u $ES_USER:$ES_PASSWORD
 echo ""
 
-curl -X PUT http://localhost:${port}/${prefix}block_info/_settings -d '{ "index" : { "max_result_window" : 100000}}' -H "Content-Type: application/json" -u $ES_USER:$ES_PASSWORD
-echo ""
-curl -X PUT http://localhost:${port}/${prefix}transaction/_settings -d '{ "index" : { "max_result_window" : 100000}}' -H "Content-Type: application/json" -u $ES_USER:$ES_PASSWORD
-echo ""
+if [ "${START_SEQ}" != 0 ] && [ `curl -o /dev/null -s -w %{http_code} http://localhost:${ES_PORT}/${SYNC_PREFIX}last_seq/_search -u $ES_USER:$ES_PASSWORD` != 200 ]; then
+    curl -X PUT http://localhost:${port}/${SYNC_PREFIX}last_seq/last_seq/sync_seq?pretty -H 'Content-Type: application/json' -d '{"sync_seq":'${START_SEQ}'}' -u $ES_USER:$ES_PASSWORD
+else
+  echo "seq record has exist"
+fi

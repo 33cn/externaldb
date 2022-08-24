@@ -2,7 +2,7 @@ version: '2'
 
 services:
   convert-update:
-    container_name: ${CONVERT_NAME}-update
+    container_name: ${PROJECT_NAME}-convert-update
     image: docker.io/ubuntu:16.04
     volumes:
       - ./bin-update/:/root/bin/
