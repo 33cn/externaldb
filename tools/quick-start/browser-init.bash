@@ -20,6 +20,12 @@ curl -XPUT http://localhost:"$ES_PORT"/"$CONVERT_PREFIX"account,"$CONVERT_PREFIX
    }
 }'
 
+curl -XPUT http://localhost:"$ES_PORT"/"$CONVERT_PREFIX"last_seq/_settings -u elastic:"$ES_PASSWORD" -H 'Content-Type: application/json' -d '{
+    "index": {
+        "refresh_interval":"1s"
+   }
+}'
+
 # 浏览器数据同步到最新时，恢复默认配置，保证account数据的实时性
 #curl -XPUT http://localhost:"$ES_PORT"/"$CONVERT_PREFIX"*/_settings?preserve_existing=true -u elastic:"$ES_PASSWORD" -H "Content-Type: application/json"  -d '{
 #    "index.translog.durability" : "fsync",
