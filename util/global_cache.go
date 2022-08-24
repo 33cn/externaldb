@@ -1,9 +1,8 @@
-package sync
+package util
 
 import (
-	"github.com/pkg/errors"
 	"github.com/33cn/externaldb/escli"
-	"github.com/33cn/externaldb/util"
+	"github.com/pkg/errors"
 )
 
 // 全局变量，变量持久化到es里面，但是涉及到需要频繁读写的变量，频繁的查es效率不高，并且es7对于实时查询的支持有限
@@ -18,7 +17,7 @@ type lastSyncSeqCache struct {
 var LastSyncSeqCache = &lastSyncSeqCache{number: 0}
 
 func InitLastSyncSeqCache(client escli.ESClient, id string, startSeq int64) error {
-	currentSeqNum, err := util.LastSyncSeq(client, id)
+	currentSeqNum, err := LastSyncSeq(client, id)
 	if err != nil {
 		log.Error("InitLastSyncSeqCache failed", "err", err, "module", id)
 		return err

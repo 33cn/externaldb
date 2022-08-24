@@ -39,6 +39,7 @@ var (
 func InitDB(cfg *proto.ConfigNew) {
 	InitWriteDB(cfg.ConvertEs, cfg.EsVersion)
 	InitSeqStore(cfg)
+	InitSeqNum(cfg)
 	db.SetVersion(cfg.EsVersion)
 	db.SetAddrID(cfg.Convert.AddressDriver)
 	InitContract(cfg)
@@ -107,6 +108,14 @@ func InitSeqStore(cfg *proto.ConfigNew) {
 		panic(err)
 	} else if SeqStore == nil && err != nil {
 		log.Info("create seqStore failed", "err", err)
+		panic(err)
+	}
+}
+
+func InitSeqNum(cfg *proto.ConfigNew) {
+	err := util.InitLastSyncSeqCache(EsWrite, cfg.Convert.AppName, cfg.Sync.StartSeq)
+	if err != nil {
+		log.Error("初始化 区块解析进度参数 last_seq 失败，请确保ES服务正常且 配置文件参数sync.startSeq 参数大于或等于0")
 		panic(err)
 	}
 }
