@@ -35,7 +35,7 @@ const TokenMapping = `{
     "mappings":{
         "properties":{
             "token_id":{
-                "type":"long"
+                "type":"keyword"
             },
             "owner":{
                 "type":"keyword"
@@ -75,7 +75,7 @@ const EVMTransferMapping = `{
     "mappings":{
         "properties":{
             "token_id":{
-                "type":"long"
+                "type":"keyword"
             },
             "from":{
                 "type":"keyword"
