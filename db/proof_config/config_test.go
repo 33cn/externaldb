@@ -11,8 +11,8 @@ import (
 	"github.com/33cn/chain33/common"
 	"github.com/33cn/chain33/types"
 	"github.com/33cn/chain33/util"
-	"github.com/stretchr/testify/assert"
 	"github.com/33cn/externaldb/db"
+	"github.com/stretchr/testify/assert"
 )
 
 var (

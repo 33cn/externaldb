@@ -3,9 +3,9 @@ package ticket
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/util"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestConvert_ConvertTx(t *testing.T) {

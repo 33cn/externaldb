@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/33cn/chain33/types"
-	"github.com/pkg/errors"
 	"github.com/33cn/externaldb/db"
+	"github.com/pkg/errors"
 )
 
 func accountConvert(acc *types.Account, t string) *Detall {

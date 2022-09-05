@@ -5,13 +5,13 @@ import (
 	"fmt"
 
 	"github.com/33cn/chain33/types"
-	"github.com/pkg/errors"
 	"github.com/33cn/externaldb/converts"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/escli/querypara"
 	"github.com/33cn/externaldb/stat"
 	"github.com/33cn/externaldb/util"
+	"github.com/pkg/errors"
 )
 
 // db

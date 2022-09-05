@@ -31,7 +31,7 @@ func Transfer(c *evm.Convert, op int, data evm.EVM) ([]db.Record, error) {
 		return nil, err
 	}
 	trans := &evm.Transfer{}
-	trans.TokenID = convert.ToInt64(event["tokenId"])
+	trans.TokenID = convert.ToString(event["tokenId"])
 	trans.From = convert.ToString(event["from"])
 	trans.To = convert.ToString(event["to"])
 	trans.Operator = convert.ToString(data["from_addr"])

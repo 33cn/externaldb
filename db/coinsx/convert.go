@@ -4,13 +4,13 @@ import (
 	"github.com/33cn/chain33/common"
 	l "github.com/33cn/chain33/common/log/log15"
 	"github.com/33cn/chain33/types"
-	coinTy "github.com/33cn/plugin/plugin/dapp/coinsx/types"
-	"github.com/pkg/errors"
 	"github.com/33cn/externaldb/converts"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/account"
 	"github.com/33cn/externaldb/db/transaction"
 	"github.com/33cn/externaldb/util"
+	coinTy "github.com/33cn/plugin/plugin/dapp/coinsx/types"
+	"github.com/pkg/errors"
 )
 
 type coinsxConvert struct {

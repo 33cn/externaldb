@@ -11,13 +11,13 @@ import (
 	l "github.com/33cn/chain33/common/log/log15"
 	"github.com/33cn/chain33/rpc/grpcclient"
 	"github.com/33cn/chain33/types"
-	"github.com/gin-gonic/gin"
 	"github.com/33cn/externaldb/db"
 	fdb "github.com/33cn/externaldb/db/file/db"
 	fpdb "github.com/33cn/externaldb/db/filepart/db"
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/proto"
 	rpcutils "github.com/33cn/externaldb/rpc/utils"
+	"github.com/gin-gonic/gin"
 )
 
 var log = l.New("module", "file")

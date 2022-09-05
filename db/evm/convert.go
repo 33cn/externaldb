@@ -9,13 +9,13 @@ import (
 	"github.com/33cn/chain33/common"
 	l "github.com/33cn/chain33/common/log/log15"
 	"github.com/33cn/chain33/types"
-	pabi "github.com/33cn/plugin/plugin/dapp/evm/executor/abi"
-	pcom "github.com/33cn/plugin/plugin/dapp/evm/executor/vm/common"
-	evmtypes "github.com/33cn/plugin/plugin/dapp/evm/types"
 	"github.com/33cn/externaldb/db/contract"
 	"github.com/33cn/externaldb/db/contractverify"
 	ndb "github.com/33cn/externaldb/db/evm/nft/db"
 	"github.com/33cn/go-kit/convert"
+	pabi "github.com/33cn/plugin/plugin/dapp/evm/executor/abi"
+	pcom "github.com/33cn/plugin/plugin/dapp/evm/executor/vm/common"
+	evmtypes "github.com/33cn/plugin/plugin/dapp/evm/types"
 
 	"github.com/33cn/externaldb/converts"
 	"github.com/33cn/externaldb/db"
@@ -247,7 +247,7 @@ func (c *Convert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	}
 	// 数据收集
 	transfers := make([]*Transfer, 0)
-	tokenID := make([]int64, 0)
+	tokenID := make([]string, 0)
 	contractType := ct.ContractType
 	mintCount := int64(0)
 	for _, record := range records {

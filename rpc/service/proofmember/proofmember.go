@@ -11,12 +11,12 @@ import (
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/escli/querypara"
 
-	"github.com/gin-gonic/gin"
-	"github.com/pkg/errors"
-	log "github.com/xuperchain/log15"
 	proofconfig "github.com/33cn/externaldb/db/proof_config"
 	"github.com/33cn/externaldb/rpc/middleware/protocol"
 	rpcutils "github.com/33cn/externaldb/rpc/utils"
+	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
+	log "github.com/xuperchain/log15"
 )
 
 // InitRouter 初始化proofrpc接口的router路由表

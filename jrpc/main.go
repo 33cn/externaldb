@@ -20,11 +20,11 @@ import (
 	"time"
 
 	l "github.com/33cn/chain33/common/log/log15"
-	tml "github.com/BurntSushi/toml"
-	"github.com/rs/cors"
 	"github.com/33cn/externaldb/proto"
 	"github.com/33cn/externaldb/util"
 	"github.com/33cn/externaldb/version"
+	tml "github.com/BurntSushi/toml"
+	"github.com/rs/cors"
 )
 
 var (

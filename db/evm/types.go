@@ -64,7 +64,7 @@ func (e EVM) ToJSON() ([]byte, error) {
 }
 
 type Token struct {
-	TokenID      int64  `json:"token_id"`
+	TokenID      string `json:"token_id"`
 	Owner        string `json:"owner"`
 	TokenType    string `json:"token_type"`
 	Amount       int64  `json:"amount"`
@@ -92,7 +92,7 @@ func (t *Token) LoadBlockData(data map[string]interface{}) {
 }
 
 type Transfer struct {
-	TokenID      int64  `json:"token_id"`
+	TokenID      string `json:"token_id"`
 	From         string `json:"from"`
 	To           string `json:"to"`
 	Operator     string `json:"operator"`
@@ -115,8 +115,8 @@ func (t *Transfer) Key() string {
 	return TransferID(t.TxHash, t.TokenID)
 }
 
-func TransferID(txHash string, TokenID int64) string {
-	return fmt.Sprintf("transfer-%s-%d", txHash, TokenID)
+func TransferID(txHash, TokenID string) string {
+	return fmt.Sprintf("transfer-%s-%s", txHash, TokenID)
 }
 
 func (t *Transfer) LoadBlockData(data map[string]interface{}) {
@@ -150,7 +150,7 @@ type TxOption struct {
 	ContractAddr string                 `json:"contract_addr,omitempty"`
 	ContractType string                 `json:"contract_type,omitempty"`
 	CallFunName  string                 `json:"call_fun_name,omitempty"`
-	TokenID      []int64                `json:"token_id,omitempty"`
+	TokenID      []string               `json:"token_id,omitempty"`
 	Transfers    []*Transfer            `json:"transfers,omitempty"`
 	Events       map[string]interface{} `json:"events,omitempty"`
 	Params       map[string]interface{} `json:"params,omitempty"`

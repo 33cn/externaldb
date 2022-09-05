@@ -3,10 +3,10 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/escli/querypara"
 	"github.com/33cn/externaldb/stat/block"
+	"github.com/pkg/errors"
 )
 
 // BlockStat BlockStat

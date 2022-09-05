@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/33cn/externaldb/escli/querypara"
+	"github.com/stretchr/testify/assert"
 )
 
 var testClient = &EVM{

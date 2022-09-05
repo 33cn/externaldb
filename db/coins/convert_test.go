@@ -3,12 +3,12 @@ package coins_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/account"
 	"github.com/33cn/externaldb/db/coins"
 	"github.com/33cn/externaldb/db/transaction"
 	"github.com/33cn/externaldb/util"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {

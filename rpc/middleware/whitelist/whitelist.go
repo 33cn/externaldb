@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	l "github.com/33cn/chain33/common/log/log15"
-	"github.com/gin-gonic/gin"
 	rpcutils "github.com/33cn/externaldb/rpc/utils"
+	"github.com/gin-gonic/gin"
 )
 
 var (

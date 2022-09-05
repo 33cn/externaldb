@@ -35,22 +35,22 @@ combine_es_host() {
     fi
 }
 
-deal_browser_config(){
-  line1=$(sed -n "/======start======/=" $CONF)
-  line2=$(sed -n "/======end======/=" $CONF)
+deal_browser_config() {
+    line1=$(sed -n "/======start======/=" $CONF)
+    line2=$(sed -n "/======end======/=" $CONF)
 
-  start=$(("$line1" + 1))
-  end=$(("$line2" - 1))
+    start=$(("$line1" + 1))
+    end=$(("$line2" - 1))
 
-  if [ "$EX_SERVICE_TYPE" = "proof" ]; then
-    sed -i "${start},${end}s/^/#/g" $CONF
-    set_key_value "openAccessControl" true
-    set_key_value "saveBlockInfo" false
-  else
-    sed -i "${start},${end}s/^#*\s*//g" $CONF
-    set_key_value "openAccessControl" false
-    set_key_value "saveBlockInfo" true
-  fi
+    if [ "$EX_SERVICE_TYPE" = "proof" ]; then
+        sed -i "${start},${end}s/^/#/g" $CONF
+        set_key_value "openAccessControl" true
+        set_key_value "saveBlockInfo" false
+    else
+        sed -i "${start},${end}s/^#*\s*//g" $CONF
+        set_key_value "openAccessControl" false
+        set_key_value "saveBlockInfo" true
+    fi
 }
 
 # 如果在配置文件中key值不是唯一的，则要加上行号进行定位。===>第一个参数为key值，第二个参数为value值，第三个参数为行号

@@ -2,8 +2,8 @@ package db
 
 import (
 	"github.com/33cn/chain33/types"
-	l "github.com/xuperchain/log15"
 	"github.com/33cn/externaldb/db"
+	l "github.com/xuperchain/log15"
 )
 
 var log = l.New("module", "db.file_part")

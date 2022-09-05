@@ -3,8 +3,8 @@ package syncseq
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/33cn/externaldb/mq/kafka"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetSeq(t *testing.T) {

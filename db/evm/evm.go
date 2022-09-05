@@ -3,9 +3,9 @@ package evm
 import (
 	"strings"
 
+	"github.com/33cn/externaldb/db"
 	pabi "github.com/33cn/plugin/plugin/dapp/evm/executor/abi"
 	pcom "github.com/33cn/plugin/plugin/dapp/evm/executor/vm/common"
-	"github.com/33cn/externaldb/db"
 )
 
 var funcConverts = make(map[string]FuncConvert)

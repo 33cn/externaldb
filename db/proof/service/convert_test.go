@@ -12,12 +12,12 @@ import (
 	"github.com/33cn/chain33/common"
 	"github.com/33cn/chain33/common/crypto"
 	"github.com/33cn/chain33/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/33cn/externaldb/db"
 	dbcom "github.com/33cn/externaldb/db/common"
 	"github.com/33cn/externaldb/db/proof/api"
 	"github.com/33cn/externaldb/db/proof/model"
 	proofUtil "github.com/33cn/externaldb/util/proof"
+	"github.com/stretchr/testify/assert"
 )
 
 // TODO fix test

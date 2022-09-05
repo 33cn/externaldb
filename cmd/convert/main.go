@@ -16,7 +16,6 @@ import (
 	"github.com/33cn/externaldb/util/cli/convert"
 
 	l "github.com/33cn/chain33/common/log/log15"
-	tml "github.com/BurntSushi/toml"
 	_ "github.com/33cn/externaldb/db/account"
 	_ "github.com/33cn/externaldb/db/coins"
 	_ "github.com/33cn/externaldb/db/coinsx"
@@ -38,6 +37,7 @@ import (
 	"github.com/33cn/externaldb/proto"
 	"github.com/33cn/externaldb/util"
 	"github.com/33cn/externaldb/version"
+	tml "github.com/BurntSushi/toml"
 
 	_ "github.com/33cn/externaldb/stat/block"
 

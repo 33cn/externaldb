@@ -6,7 +6,6 @@ package comm
 
 import (
 	l "github.com/33cn/chain33/common/log/log15"
-	"github.com/gin-gonic/gin"
 	"github.com/33cn/externaldb/db/block"
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/proto"
@@ -14,6 +13,7 @@ import (
 	rpcutils "github.com/33cn/externaldb/rpc/utils"
 	"github.com/33cn/externaldb/util"
 	"github.com/33cn/externaldb/util/health"
+	"github.com/gin-gonic/gin"
 )
 
 var (
