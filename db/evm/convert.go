@@ -247,7 +247,7 @@ func (c *Convert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	}
 	// 数据收集
 	transfers := make([]*Transfer, 0)
-	tokenID := make([]int64, 0)
+	tokenID := make([]string, 0)
 	contractType := ct.ContractType
 	mintCount := int64(0)
 	for _, record := range records {
