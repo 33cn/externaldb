@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/escli/querypara"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 type TokenDB interface {

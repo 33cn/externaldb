@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 
 	l "github.com/33cn/chain33/common/log/log15"
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/util"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 const (

@@ -11,10 +11,10 @@ import (
 	"fmt"
 
 	"github.com/33cn/chain33/types"
-	"github.com/pkg/errors"
 	"github.com/33cn/externaldb/db/account"
 	"github.com/33cn/externaldb/db/token"
 	"github.com/33cn/externaldb/db/transaction"
+	"github.com/pkg/errors"
 )
 
 // TokenCache cache

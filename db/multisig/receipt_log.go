@@ -7,9 +7,9 @@ import (
 	"github.com/33cn/chain33/types"
 	"github.com/pkg/errors"
 
-	pty "github.com/33cn/plugin/plugin/dapp/multisig/types"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/account"
+	pty "github.com/33cn/plugin/plugin/dapp/multisig/types"
 )
 
 // create: logs := []int{types.TyLogFee, TyLogMultiSigAccCreate}

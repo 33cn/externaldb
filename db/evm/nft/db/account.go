@@ -3,8 +3,8 @@ package db
 import (
 	"fmt"
 
-	pcom "github.com/33cn/plugin/plugin/dapp/evm/executor/vm/common"
 	"github.com/33cn/externaldb/db"
+	pcom "github.com/33cn/plugin/plugin/dapp/evm/executor/vm/common"
 )
 
 type Account struct {

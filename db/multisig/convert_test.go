@@ -3,12 +3,12 @@ package multisig_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/account"
 	"github.com/33cn/externaldb/db/multisig"
 	"github.com/33cn/externaldb/db/transaction"
 	"github.com/33cn/externaldb/util"
+	"github.com/stretchr/testify/assert"
 )
 
 func init() {

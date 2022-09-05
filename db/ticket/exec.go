@@ -7,13 +7,13 @@ import (
 	"github.com/33cn/chain33/common"
 	l "github.com/33cn/chain33/common/log/log15"
 	"github.com/33cn/chain33/types"
-	pty "github.com/33cn/plugin/plugin/dapp/ticket/types"
-	"github.com/pkg/errors"
 	"github.com/33cn/externaldb/converts"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/account"
 	"github.com/33cn/externaldb/db/transaction"
 	"github.com/33cn/externaldb/util"
+	pty "github.com/33cn/plugin/plugin/dapp/ticket/types"
+	"github.com/pkg/errors"
 )
 
 // 地址余额： 是否有多余的币，没有参与挖矿, 通过帐号信息可以看到

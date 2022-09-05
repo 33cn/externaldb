@@ -6,9 +6,9 @@ import (
 	proofconfig "github.com/33cn/externaldb/db/proof_config"
 
 	"github.com/33cn/chain33/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/proof/model"
+	"github.com/stretchr/testify/assert"
 )
 
 type myRecoverDB struct {

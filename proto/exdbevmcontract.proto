@@ -98,7 +98,7 @@ message ReceiptEVMContractCmd {
   string ret = 5;
 }
 
-message CheckEVMAddrReq {string addr = 1;}
+message CheckEVMAddrReq { string addr = 1; }
 message CheckEVMAddrResp {
   bool contract = 1;
   string contractAddr = 2;
@@ -110,16 +110,16 @@ message EstimateEVMGasReq {
   string tx = 1;
   string from = 2;
 }
-message EstimateEVMGasResp {uint64 gas = 1;}
+message EstimateEVMGasResp { uint64 gas = 1; }
 
 message EvmDebugReq {
   // 0 query, 1 set, -1 clear
   int32 optype = 1;
 }
 
-message EvmDebugResp {string debugStatus = 1;}
+message EvmDebugResp { string debugStatus = 1; }
 
-message EvmQueryAbiReq {string address = 1;}
+message EvmQueryAbiReq { string address = 1; }
 
 message EvmQueryAbiResp {
   string address = 1;
@@ -170,9 +170,9 @@ message EvmTransferOnlyReq {
   string note = 4;
 }
 
-message EvmGetNonceReq {string address = 1;}
+message EvmGetNonceReq { string address = 1; }
 
-message EvmGetNonceRespose {int64 nonce = 1;}
+message EvmGetNonceRespose { int64 nonce = 1; }
 
 message EvmCalcNewContractAddrReq {
   string caller = 1;
@@ -184,7 +184,7 @@ message EvmGetPackDataReq {
   string parameter = 2;
 }
 
-message EvmGetPackDataRespose {string packData = 1;}
+message EvmGetPackDataRespose { string packData = 1; }
 
 message EvmGetUnpackDataReq {
   string abi = 1;
@@ -192,4 +192,4 @@ message EvmGetUnpackDataReq {
   string data = 3;
 }
 
-message EvmGetUnpackDataRespose {repeated string unpackData = 1;}
+message EvmGetUnpackDataRespose { repeated string unpackData = 1; }

@@ -3,8 +3,8 @@ package db
 import (
 	"github.com/33cn/chain33/rpc/jsonclient"
 	rpctypes "github.com/33cn/chain33/rpc/types"
-	"github.com/33cn/plugin/plugin/dapp/evm/executor/vm/common"
 	"github.com/33cn/externaldb/db"
+	"github.com/33cn/plugin/plugin/dapp/evm/executor/vm/common"
 )
 
 // jRPCDB chain json rpc client

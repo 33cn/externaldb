@@ -3,11 +3,11 @@ package proof
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/33cn/externaldb/db/proof/proofdb"
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/escli/querypara"
 	rpcutils "github.com/33cn/externaldb/rpc/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestProof_DonationStats(t *testing.T) {

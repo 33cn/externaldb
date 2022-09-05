@@ -1,8 +1,8 @@
 package util
 
 import (
-	"github.com/pkg/errors"
 	"github.com/33cn/externaldb/db"
+	"github.com/pkg/errors"
 )
 
 // InitIndex create index/type mapping if not exist

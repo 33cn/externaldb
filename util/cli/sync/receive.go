@@ -17,9 +17,9 @@ import (
 	"github.com/33cn/chain33/rpc/jsonclient"
 	rpcTypes "github.com/33cn/chain33/rpc/types"
 	"github.com/33cn/chain33/types"
-	"github.com/rs/cors"
 	"github.com/33cn/externaldb/proto"
 	"github.com/33cn/externaldb/util/health"
+	"github.com/rs/cors"
 )
 
 // SaveSeq 保存seq

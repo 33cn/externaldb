@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/33cn/chain33/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/33cn/externaldb/db/block"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBlockStat_Stat(t *testing.T) {

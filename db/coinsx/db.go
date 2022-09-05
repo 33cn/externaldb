@@ -3,8 +3,8 @@ package coinsx
 import (
 	"encoding/json"
 
-	coinTy "github.com/33cn/plugin/plugin/dapp/coinsx/types"
 	"github.com/33cn/externaldb/db"
+	coinTy "github.com/33cn/plugin/plugin/dapp/coinsx/types"
 )
 
 const (

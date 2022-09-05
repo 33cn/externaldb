@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	pty "github.com/33cn/plugin/plugin/dapp/multisig/types"
 	"github.com/33cn/externaldb/db"
+	pty "github.com/33cn/plugin/plugin/dapp/multisig/types"
 )
 
 // MS path

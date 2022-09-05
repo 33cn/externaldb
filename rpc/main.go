@@ -18,7 +18,6 @@ import (
 	tml "github.com/BurntSushi/toml"
 	"github.com/gin-gonic/gin"
 
-	cors "github.com/rs/cors/wrapper/gin"
 	"github.com/33cn/externaldb/proto"
 	"github.com/33cn/externaldb/rpc/docs"
 	"github.com/33cn/externaldb/rpc/middleware/protocol"
@@ -30,6 +29,7 @@ import (
 	rpcutils "github.com/33cn/externaldb/rpc/utils"
 	"github.com/33cn/externaldb/util"
 	"github.com/33cn/externaldb/version"
+	cors "github.com/rs/cors/wrapper/gin"
 )
 
 var (

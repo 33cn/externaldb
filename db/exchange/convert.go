@@ -5,12 +5,12 @@ import (
 
 	l "github.com/33cn/chain33/common/log/log15"
 	"github.com/33cn/chain33/types"
-	pty "github.com/33cn/plugin/plugin/dapp/exchange/types"
 	"github.com/33cn/externaldb/converts"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/account"
 	"github.com/33cn/externaldb/db/transaction"
 	"github.com/33cn/externaldb/util"
+	pty "github.com/33cn/plugin/plugin/dapp/exchange/types"
 )
 
 var log = l.New("module", "db.exchange")

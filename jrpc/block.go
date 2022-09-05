@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
 	"github.com/33cn/externaldb/db/blockinfo"
 	"github.com/33cn/externaldb/escli/querypara"
+	"github.com/pkg/errors"
 )
 
 type Block struct {

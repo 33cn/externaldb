@@ -14,9 +14,9 @@ import (
 	"github.com/33cn/chain33/types"
 	"github.com/pkg/errors"
 
-	pty "github.com/33cn/plugin/plugin/dapp/trade/types"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/account"
+	pty "github.com/33cn/plugin/plugin/dapp/trade/types"
 )
 
 func (t *tradeConvert) convertSellLimitLog(op int) ([]db.Record, error) {

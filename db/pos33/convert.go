@@ -10,13 +10,13 @@ import (
 	"github.com/33cn/chain33/rpc/jsonclient"
 	rpctypes "github.com/33cn/chain33/rpc/types"
 	"github.com/33cn/chain33/types"
-	"github.com/pkg/errors"
-	pty "github.com/yccproject/ycc/plugin/dapp/pos33/types"
 	"github.com/33cn/externaldb/converts"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/account"
 	"github.com/33cn/externaldb/db/transaction"
 	"github.com/33cn/externaldb/util"
+	"github.com/pkg/errors"
+	pty "github.com/yccproject/ycc/plugin/dapp/pos33/types"
 )
 
 var (
