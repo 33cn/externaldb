@@ -8,17 +8,17 @@ import (
 )
 
 type Transfer struct {
-	From         string  `json:"from"`
-	FromName     string  `json:"from_name"`
-	FromRealName string  `json:"from_real_name"`
-	FromUserName string  `json:"from_user_name"`
-	To           string  `json:"to"`
-	ToName       string  `json:"to_name"`
-	ToRealName   string  `json:"to_real_name"`
-	ToUserName   string  `json:"to_user_name"`
-	IDs          []int64 `json:"ids"`
-	Amounts      []int64 `json:"amounts"`
-	Data         []byte  `json:"data"`
+	From         string   `json:"from"`
+	FromName     string   `json:"from_name"`
+	FromRealName string   `json:"from_real_name"`
+	FromUserName string   `json:"from_user_name"`
+	To           string   `json:"to"`
+	ToName       string   `json:"to_name"`
+	ToRealName   string   `json:"to_real_name"`
+	ToUserName   string   `json:"to_user_name"`
+	IDs          []string `json:"ids"`
+	Amounts      []int64  `json:"amounts"`
+	Data         []byte   `json:"data"`
 	EvmState
 }
 

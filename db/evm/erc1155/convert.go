@@ -137,22 +137,22 @@ func TransferBatch(c *evm.Convert, op int, data evm.EVM) ([]db.Record, error) {
 			from := convert.ToString(event["from"])
 			operator := convert.ToString(event["operator"])
 
-			idsInt := make([]string, 0, len(ids))
+			idsStr := make([]string, 0, len(ids))
 			for i := range ids {
-				idsInt = append(idsInt, convert.ToString(ids[i]))
+				idsStr = append(idsStr, convert.ToString(ids[i]))
 			}
-			toTokens, err := c.EvmTokenDb.GetTokenMap(convert.ToString(data["contract_addr"]), to, idsInt)
+			toTokens, err := c.EvmTokenDb.GetTokenMap(convert.ToString(data["contract_addr"]), to, idsStr)
 			if err != nil {
 				return nil, err
 			}
-			fromTokens, err := c.EvmTokenDb.GetTokenMap(convert.ToString(data["contract_addr"]), to, idsInt)
+			fromTokens, err := c.EvmTokenDb.GetTokenMap(convert.ToString(data["contract_addr"]), to, idsStr)
 			if err != nil {
 				return nil, err
 			}
 
 			for i := range ids {
 				trans := &evm.Transfer{}
-				trans.TokenID = convert.ToString(ids[i])
+				trans.TokenID = idsStr[i]
 				trans.Amount = convert.ToInt64(vals[i])
 				trans.To = to
 				trans.From = from

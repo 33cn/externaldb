@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/33cn/chain33 v1.67.4-0.20220530021029-97ad1ce844d4
-	github.com/33cn/go-kit v1.0.0
+	github.com/33cn/go-kit v1.0.1
 	github.com/33cn/plugin v1.67.3
 	github.com/33cn/proofparse v1.0.0
 	github.com/BurntSushi/toml v0.3.1
