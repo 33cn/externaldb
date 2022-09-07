@@ -50,6 +50,7 @@ github.com/33cn/chain33 v1.67.4-0.20220530021029-97ad1ce844d4 h1:z79ODJUqCSQ07N8
 github.com/33cn/chain33 v1.67.4-0.20220530021029-97ad1ce844d4/go.mod h1:rOabIpP0KWiehXmX6ShOrAveTUvdoQvjUkUePdwk/oQ=
 github.com/33cn/go-kit v1.0.0 h1:YTxlpVjts+z6DsyVRB+het3Lewu4tabvz88dd7AVS9M=
 github.com/33cn/go-kit v1.0.0/go.mod h1:47SlAjZPy+nx8YnI9429navWmQ5J2M2XXM1QYmqfpPY=
+github.com/33cn/go-kit v1.0.1/go.mod h1:47SlAjZPy+nx8YnI9429navWmQ5J2M2XXM1QYmqfpPY=
 github.com/33cn/plugin v1.67.3 h1:QsKhM3Uqtx/RHZOAJVByHcCy2P1nGtADHh6jUQS92XY=
 github.com/33cn/plugin v1.67.3/go.mod h1:uvlJy8zyxsn2TsYf5+8ojFEIU3BQyeyyJ5VXtnBuIes=
 github.com/33cn/proofparse v1.0.0 h1:O7gLfE6LaXifBI9KVuTlMnVZa2+mBWQ3LaXBXIww/8g=

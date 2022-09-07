@@ -1,6 +1,7 @@
 package evm
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -51,7 +52,10 @@ func (e EVM) GetEvents() (map[string]interface{}, error) {
 	if !ok {
 		return nil, ErrNoEvents
 	}
-	if err := json.Unmarshal([]byte(eventsBuf), &events); err != nil {
+	der := json.NewDecoder(bytes.NewReader([]byte(eventsBuf)))
+	// 用number类型替换float64
+	der.UseNumber()
+	if err := der.Decode(&events); err != nil {
 		return nil, err
 	}
 	e["evm_events_map"] = events
