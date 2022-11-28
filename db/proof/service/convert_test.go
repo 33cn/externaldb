@@ -210,7 +210,7 @@ func Test_Proof1(t *testing.T) {
 	rec := types.ReceiptData{Ty: types.ExecPack}
 	env.Block.Receipts = append(env.Block.Receipts, &rec)
 
-	convert := NewConvert("sanhe", "bty", "proof")
+	convert := NewConvert("user.p.sanhe.", "bty", "proof")
 	c := convert.(*ProofConvert)
 	c.RecordGen = NewRecordGen("p1", "p2", "l1", "l2", "t1", "t2", "u1", "u2")
 	c.configDB = &proofconfig.None{}
@@ -811,8 +811,8 @@ func TestProofConvert_AddProof(t *testing.T) {
 	t.Log("Test_Proof1111", "payload.Option", payload2.Option)
 	t.Log("Test_Proof1111", "payload.Update", payload2.Ext)
 
-	tx := &types.Transaction{Execer: []byte("user.p.testproof.proof"), Payload: []byte(payload)}
-	tx.To = db.ExecAddress("user.p.testproof.proof")
+	tx := &types.Transaction{Execer: []byte("user.proof"), Payload: []byte(payload)}
+	tx.To = db.ExecAddress("user.proof")
 	priv := HexToPrivkey(Priv)
 	if priv != nil {
 		tx.Sign(types.SECP256K1, priv)
@@ -835,7 +835,7 @@ func TestProofConvert_AddProof(t *testing.T) {
 	rec := types.ReceiptData{Ty: types.ExecPack}
 	env.Block.Receipts = append(env.Block.Receipts, &rec)
 
-	convert := NewConvert("user.p.testproof.", "bty", "proof")
+	convert := NewConvert("local", "bty", "user.proof")
 	c := convert.(*ProofConvert)
 	c.RecordGen = NewRecordGen("p1", "p2", "l1", "l2", "t1", "t2", "u1", "u2")
 	c.configDB = &proofconfig.None{}
@@ -854,7 +854,7 @@ func TestProofConvert_AddProof(t *testing.T) {
 		}
 	}
 
-	re1 := records[0].(*ProofRecord)
+	re1 := records[0].(*ProofUpdateRecord)
 	t.Log("Test_Proof", "ikey", re1.Key())
 	t.Log("Test_Proof", "OpType", re1.OpType())
 
