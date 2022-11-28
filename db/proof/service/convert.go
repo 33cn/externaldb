@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/33cn/externaldb/db/transaction"
+	"strings"
 
 	"github.com/33cn/chain33/common"
 	l "github.com/33cn/chain33/common/log/log15"
@@ -58,7 +59,8 @@ func (t *ProofConvert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	tx := env.Block.Block.Txs[env.TxIndex]
 
 	actionName := "add_proof"
-	if string(tx.Execer) == t.Title+api.DeleteTx {
+	switch strings.TrimPrefix(string(tx.Execer), t.Title) {
+	case api.DeleteTx, api.MainDeleteTx:
 		actionName = "delete_proof"
 		delproof, delerr := t.DelProof(env, op)
 		err = delerr
@@ -67,7 +69,7 @@ func (t *ProofConvert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 		} else {
 			log.Error("convertTX:DelProof", "err", err)
 		}
-	} else if string(tx.Execer) == t.Title+api.RecoverTx || string(tx.Execer) == t.Title+api.JrpcRecoverTx {
+	case api.RecoverTx, api.MainRecoverTx:
 		actionName = "revocer_proof"
 		rproof, rerr := t.RecoverProof(env, op)
 		err = rerr
@@ -76,7 +78,7 @@ func (t *ProofConvert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 		} else {
 			log.Error("convertTX:RecoverProof", "err", err)
 		}
-	} else if string(tx.Execer) == t.Title+api.TemplateTx {
+	case api.TemplateTx, api.MainTemplateTx:
 		log.Debug("deal template tx", "execer", string(tx.Execer))
 		addtemplate, adderr := t.AddTemplate(env, op)
 		err = adderr
@@ -86,7 +88,7 @@ func (t *ProofConvert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 		} else {
 			log.Error("convertTX:AddTemplate", "err", err)
 		}
-	} else {
+	case api.AddProof, api.MainAddProof:
 		log.Debug("deal add proof tx", "execer", string(tx.Execer))
 		addproof, adderr := t.AddProof(env, op)
 		err = adderr
@@ -95,6 +97,8 @@ func (t *ProofConvert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 		} else {
 			log.Error("convertTX:AddProof", "err", err)
 		}
+	default:
+		log.Error("tx.Execer not match", "tx.Execer", string(tx.Execer))
 	}
 	// r3 record tx
 	txr := transaction.ConvertTransaction(env)

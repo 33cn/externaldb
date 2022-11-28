@@ -10,11 +10,6 @@ import (
 	proofconfig "github.com/33cn/externaldb/db/proof_config"
 )
 
-// consts
-const (
-	Name = "proof"
-)
-
 // 本文件将做成插件需要的接口和函数都提到这个文件, 作为参考, 方便写文档, 也方便其他人实现新的插件
 // 实现插件需要至少实现下面的内容
 // 1. 注册插件
@@ -25,17 +20,20 @@ const (
 
 // 1注册插件, NewConvert函数需要满足接口 db.ExecConvert
 func init() {
-	converts.Register(Name, NewConvert)
+	converts.Register(api.AddProof, NewConvert)
+	converts.Register(api.MainAddProof, NewConvert)
 	converts.Register(api.TemplateTx, NewConvert)
+	converts.Register(api.MainTemplateTx, NewConvert)
 	converts.Register(api.DeleteTx, NewConvert)
+	converts.Register(api.MainDeleteTx, NewConvert)
 	converts.Register(api.RecoverTx, NewConvert)
-	converts.Register(api.JrpcRecoverTx, NewConvert)
+	converts.Register(api.MainRecoverTx, NewConvert)
 }
 
 // NewConvert 2注册插件需要的插件创建函数
 func NewConvert(paraTitle, symbol string, supports []string) db.ExecConvert {
 	e := &service.ProofConvert{OrgTitle: paraTitle,
-		Symbol: symbol, Name: Name, Title: db.CalcParaTitle(paraTitle)}
+		Symbol: symbol, Name: api.AddProof, Title: db.CalcParaTitle(paraTitle)}
 	e.RecordGen = service.NewRecordGen(proofdb.ProofDBX, proofdb.ProofTableX, proofdb.LogDBX, proofdb.LogTableX, proofdb.TemplateDBX, proofdb.TemplateTableX, proofdb.ProofUpdateDBX, proofdb.ProofUpdateTableX)
 	return &Convert{convert: e}
 }

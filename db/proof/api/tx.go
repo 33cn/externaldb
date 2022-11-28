@@ -2,10 +2,14 @@ package api
 
 // 交易名称
 const (
-	DeleteTx      = "proof_delete"
-	RecoverTx     = "proof_recover"
-	TemplateTx    = "template"
-	JrpcRecoverTx = "user.proof_recover"
+	AddProof       = "proof"
+	MainAddProof   = "user.proof"
+	DeleteTx       = "proof_delete"
+	MainDeleteTx   = "user.proof_delete"
+	RecoverTx      = "proof_recover"
+	MainRecoverTx  = "user.proof_recover"
+	TemplateTx     = "template"
+	MainTemplateTx = "user.template"
 )
 
 // ProofInfo (tx.Payload 对应结构体的 jsonstr)

@@ -113,26 +113,31 @@ all = ["account", "transaction"]
 generate = ["account", "transaction"]
 
 [[convert.data]]
+# 平行链上用 proof 和 主链用 user.proof
 exec = "proof"
 all = []
 generate = []
 
 [[convert.data]]
+# 平行链上用 config 和 主链用 user.config
 exec = "config"
 all = []
 generate = []
 
 [[convert.data]]
+# 平行链上用 proof_delete 和 主链用 user.proof_delete
 exec = "proof_delete"
 all = []
 generate = []
 
 [[convert.data]]
+# 平行链上用 proof_recover 和 主链用 user.proof_recover
 exec = "proof_recover"
 all = []
 generate = []
 
 [[convert.data]]
+# 平行链上用 template 和 主链用 user.template
 exec = "template"
 all = []
 generate = []
