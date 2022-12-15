@@ -60,7 +60,7 @@ func main() {
 
 	go proc1.Proc(cfg.Sync.StartSeq)
 
-	receiver, err := sync.CreateReceiver(cfg)
+	receiver, err := sync.CreateReceiver(cfg, proc1)
 	if err != nil {
 		log.Error("Register failed", "err", err.Error())
 		return

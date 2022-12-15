@@ -20,6 +20,7 @@ import (
 	"github.com/33cn/externaldb/proto"
 	"github.com/33cn/externaldb/util/health"
 	"github.com/rs/cors"
+	"google.golang.org/grpc"
 )
 
 // SaveSeq 保存seq
@@ -60,11 +61,32 @@ const (
 )
 
 // CreateReceiver ...
-func CreateReceiver(cfg *proto.ConfigNew) (Receiver, error) {
+func CreateReceiver(cfg *proto.ConfigNew, s SeqSaver) (Receiver, error) {
 	err := checkPushFormat(cfg.Sync.PushFormat)
 	if err != nil {
 		log.Error("checkPushFormat failed", "err", err.Error())
 		return nil, err
+	}
+
+	// 在新版本的协议中, 默认行为从注册推送时当前节点高度进行同步
+	// 所以导致无法配置成从0开始同步
+	// 实际上如果指定高度进行同步, 应该会在一个比较大的数值, 不会配置成1
+	// 故在配置成1 时, 程序主动去获得高度 0, 1 的的区块信息
+	if cfg.Sync.StartHeight == 0 && cfg.Sync.StartSeq == 0 {
+		cfg.Sync.StartHeight = 1
+		cfg.Sync.StartSeq = 1
+		cfg.Sync.StartBlockHash = ""
+
+		seqs, err := getBlocks(cfg.Chain.GrpcHost, 0, 1)
+		if err != nil {
+			log.Error("getBlocks 0-1 failed", "err", err.Error())
+			return nil, err
+		}
+		err = s.Save(seqs)
+		if err != nil {
+			log.Error("getBlocks 0-1 failed", "err", err.Error())
+			return nil, err
+		}
 	}
 
 	p := pusher{
@@ -92,6 +114,24 @@ func CreateReceiver(cfg *proto.ConfigNew) (Receiver, error) {
 		p.seq = 0
 	}
 	return NewReceiver(&p, cfg.Sync.PushBind)
+}
+
+func getBlocks(host string, heightStart, heightEnd int64) (*types.BlockSeqs, error) {
+	var seqs types.BlockSeqs
+	conn, err := grpc.Dial(host, grpc.WithInsecure(), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*100)))
+	if err != nil {
+		panic(err)
+	}
+
+	client := types.NewChain33Client(conn)
+	for i := heightStart; i <= heightEnd; i++ {
+		seq, err := client.GetBlockBySeq(context.Background(), &types.Int64{Data: i})
+		if err != nil {
+			return nil, err
+		}
+		seqs.Seqs = append(seqs.Seqs, seq)
+	}
+	return &seqs, err
 }
 
 func getHash(host string, hight int64) (string, error) {
