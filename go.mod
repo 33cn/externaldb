@@ -27,6 +27,7 @@ require (
 	github.com/swaggo/swag v1.7.8
 	github.com/xuperchain/log15 v0.0.0-20190620081506-bc88a9198230
 	github.com/yccproject/ycc v0.0.0-20220627083516-6cd4eb264dde
+	google.golang.org/grpc v1.40.0 // indirect
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
