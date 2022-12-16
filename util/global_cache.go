@@ -14,7 +14,7 @@ type lastSyncSeqCache struct {
 	number int64
 }
 
-var LastSyncSeqCache = &lastSyncSeqCache{number: 0}
+var LastSyncSeqCache = &lastSyncSeqCache{number: -1}
 
 func InitLastSyncSeqCache(client escli.ESClient, id string, startSeq int64) error {
 	currentSeqNum, err := LastSyncSeq(client, id)
@@ -26,7 +26,7 @@ func InitLastSyncSeqCache(client escli.ESClient, id string, startSeq int64) erro
 		log.Info("last_seq 从ES获取失败，自动使用配置文件sync.startSeq")
 	}
 	if currentSeqNum < startSeq {
-		currentSeqNum = startSeq
+		currentSeqNum = startSeq - 1
 	}
 	log.Info("last_seq 处理成功", "当前last_seq ", currentSeqNum)
 	// 前面步骤，底层包在查询ES的last_seq不存在时，会输出ERROR错误日志，为了方便查看，这里也在ERROR的位置输出last_seq 处理成功, 便于理解
@@ -35,8 +35,8 @@ func InitLastSyncSeqCache(client escli.ESClient, id string, startSeq int64) erro
 }
 
 func (s *lastSyncSeqCache) SetNumber(n int64) error {
-	if n < 0 {
-		return errors.New("LastSyncSeq Number has to be greater than 0")
+	if n < -1 {
+		return errors.New("LastSyncSeq Number must >= -1")
 	}
 	s.number = n
 	return nil
