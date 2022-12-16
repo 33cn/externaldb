@@ -173,10 +173,10 @@ func (s *mqSeqStore) SaveSeqs(blockItems []db.Record) error {
 	for _, v := range blockItems {
 		pid, offset, err := s.mqSeqClient.Publish(s.topic, v.Value(), v.Key())
 		if err != nil {
-			log.Error("pub failed", "err", err)
+			log.Error("pub failed", "err", err, "ID", v.Key(), "value.len", len(v.Value()))
 			return err
 		}
-		log.Debug("publish msg success", "ID", v.Key(), "pid", pid, "offset", offset)
+		log.Debug("publish msg success", "ID", v.Key(), "pid", pid, "offset", offset, "value.len", len(v.Value()))
 	}
 	return nil
 }
