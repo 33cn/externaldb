@@ -6,10 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAanalysisTx(t *testing.T) {
-
-}
-
 func TestParseEvmDeploy(t *testing.T) {
 	host := "183.134.99.137:28902"
 	txHash := "0xcbcd45ffaf7e84338f72f1909e3afc8dcdd7b4b4292fa45739442214d196d073"
@@ -17,8 +13,12 @@ func TestParseEvmDeploy(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, detail.Tx.Nonce)
 
-	parsed := parseEvmTx(detail, "abi")
+	parsed := parseEvmTx(detail, testGetAbi)
 	assert.Equal(t, "", parsed)
+}
+
+func testGetAbi(address string) (string, error) {
+	return testAbi, nil
 }
 
 func TestParseEvmCall(t *testing.T) {
@@ -28,7 +28,7 @@ func TestParseEvmCall(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, detail.Tx.Nonce)
 
-	parsed := parseEvmTx(detail, testAbi)
+	parsed := parseEvmTx(detail, testGetAbi)
 	assert.Equal(t, "", parsed)
 }
 
@@ -39,7 +39,7 @@ func TestParseEvmTransfer(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, detail.Tx.Nonce)
 
-	parsed := parseEvmTx(detail, testAbi)
+	parsed := parseEvmTx(detail, testGetAbi)
 	assert.Equal(t, "", parsed)
 }
 

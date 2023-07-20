@@ -19,18 +19,12 @@ import (
 )
 
 func analysisTx(txHash string) string {
-
 	tx, err := getTxDetailFromChain33("", "")
 	if err != nil {
 		return ""
 	}
-
-	abi := "" // todo get abi
-
-	args := parseEvmTx(tx, abi)
-
+	args := parseEvmTx(tx, func(string) (string, error) { return "", nil })
 	events := getEvent("")
-
 	_, _ = args, events
 	return ""
 }
@@ -108,7 +102,7 @@ func isEvmTx(execer string) bool {
 // 1. 部署合约, 执行器为 evm, 地址为 evm地址, 类型为部署
 // 2. 合约功能, 执行器为 evm, 地址为 合约地址,  类型为合约功能
 // 3. 转账功能, 执行器为 evm, 地址为 evm地址, 类型为合约功能
-func parseEvmTx(txDetail *types.TransactionDetail, abi string) *EvmTxInfo {
+func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, error)) *EvmTxInfo {
 	var info EvmTxInfo
 	isEvm := isEvmTx(string(txDetail.Tx.Execer))
 	if !isEvm {
@@ -122,6 +116,7 @@ func parseEvmTx(txDetail *types.TransactionDetail, abi string) *EvmTxInfo {
 	if err != nil {
 		info.ParseSuccess = false
 		info.Error = "parse payload failed: " + err.Error()
+		log.Error("ParseTx", "Decode Tx Payload", err.Error())
 		return &info
 	}
 	info.ParseSuccess = true
@@ -137,11 +132,14 @@ func parseEvmTx(txDetail *types.TransactionDetail, abi string) *EvmTxInfo {
 	if err != nil {
 		info.ParseSuccess = false
 		info.Error = "decode note to eth failed: " + err.Error()
+		log.Error("ParseTx", "Decode Tx Note", err.Error())
+		return &info
 	}
 	err = ntx.UnmarshalBinary(ntxRaw)
 	if err != nil {
 		info.ParseSuccess = false
 		info.Error = "parse eth-th failed: " + err.Error()
+		log.Error("ParseTx", " Tx ", info.Error)
 		return &info
 	}
 
@@ -166,10 +164,16 @@ func parseEvmTx(txDetail *types.TransactionDetail, abi string) *EvmTxInfo {
 		return &info
 	}
 	// 调用合约功能
-
+	abi, err := getabi(info.ContractAddress)
+	if err != nil {
+		info.ParseSuccess = false
+		log.Error("ParseTx", " get abi failed ", err.Error())
+		return &info
+	}
 	fun, arg, err := parseParam(abi, payload.Para, nil)
 	if err != nil {
 		info.ParseSuccess = false
+		log.Error("ParseTx", " abi parse parseParam ", err.Error())
 		return &info
 	}
 	info.Func.FuncName = fun
@@ -209,13 +213,14 @@ func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) {
 		info.ExecSuccess = true
 	}
 
-	for _, log := range tx.Receipt.Logs {
-		switch log.Ty {
+	for i, log1 := range tx.Receipt.Logs {
+		switch log1.Ty {
 		case logtype.TyLogCallContract: // 603: // LogCallContract
 			var l logtype.ReceiptEVMContract
-			err := types.Decode(log.Log, &l)
+			err := types.Decode(log1.Log, &l)
 			if err != nil {
 				info.Error = "decode log failed: " + err.Error()
+				log.Error("decode log failed:", "err", err)
 				return
 			}
 			info.GasUsed = l.UsedGas
@@ -225,14 +230,16 @@ func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) {
 				continue
 			}
 			var e types.EVMLog
-			err := types.Decode(log.Log, &e)
+			err := types.Decode(log1.Log, &e)
 			if err != nil {
-				info.Error = "decode log failed: " + err.Error()
+				info.Error = "decode event failed: " + err.Error()
+				log.Error("decode event failed:", "idx", i, "err", err)
 				return
 			}
 			name, args, err := UnpackEvent(abi, e.Topic, string(e.Data))
 			if err != nil {
-				info.Error = "decode event failed: " + err.Error()
+				info.Error = "UnpackEvent event failed: " + err.Error()
+				log.Error("UnpackEvent event failed:", "idx", i, "err", err)
 				return
 			}
 			info.Events = append(info.Events, EvmEvent{Name: name, Args: args})
