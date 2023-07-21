@@ -3,6 +3,7 @@ package main
 import (
 	"testing"
 
+	"github.com/33cn/chain33/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,6 +20,18 @@ func TestParseEvmDeploy(t *testing.T) {
 
 func testGetAbi(address string) (string, error) {
 	return testAbi, nil
+}
+
+// []byte to  string
+func TestByteToString(t *testing.T) {
+	str := ("0x00000000000000000000000000000000000000000000000000000000000000010000000000000000000000008387505d1571ee2b2d7339addb3f5dcf9f32c389000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000023636000000000000000000000000000000000000000000000000000000000000")
+	assert.Equal(t, 322, len(str))
+	bs, err := common.FromHex(str)
+	assert.Nil(t, err)
+	assert.Equal(t, 160, len(bs))
+	str2 := string(bs)
+	assert.Equal(t, 160, len(str2))
+
 }
 
 func TestParseEvmCall(t *testing.T) {
