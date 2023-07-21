@@ -105,6 +105,9 @@ func main() {
 		block := Block{DBRead: convDB}
 		server.Register(&block)
 
+		evm1 := Evm{DBRead: convDB, ChainGrpc: chain.GrpcHost}
+		server.Register(&evm1)
+
 		// TODO support more
 		// ... server
 
