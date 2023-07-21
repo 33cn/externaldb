@@ -170,6 +170,7 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 		log.Error("ParseTx", " get abi failed ", err.Error())
 		return &info
 	}
+	// 1. 解析调用功能的参数
 	fun, arg, err := parseParam(abi, payload.Para, nil)
 	if err != nil {
 		info.ParseSuccess = false
@@ -179,6 +180,7 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 	info.Func.FuncName = fun
 	info.Func.Args = arg
 
+	// 2. 解析调用功能产生的事件
 	parseLogs(abi, txDetail, &info)
 
 	return &info
@@ -189,6 +191,7 @@ func getEvent(data string) []string {
 }
 
 func parseParam(abiStr string, data []byte, m map[string]interface{}) (string, string, error) {
+	log.Debug("parseParam  start")
 	abi, err := pabi.JSON(strings.NewReader(abiStr))
 	if err != nil {
 		return "", "", fmt.Errorf("parseParam: map is nil")
@@ -204,8 +207,8 @@ func parseParam(abiStr string, data []byte, m map[string]interface{}) (string, s
 		log.Error("parseParam: json.Marshal(pm)", "err", err)
 		return "", "", err
 	}
+	log.Debug("parseParam  end")
 	return pm["call_func_name"].(string), string(buf), nil
-
 }
 
 func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) {
@@ -216,6 +219,7 @@ func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) {
 	for i, log1 := range tx.Receipt.Logs {
 		switch log1.Ty {
 		case logtype.TyLogCallContract: // 603: // LogCallContract
+			log.Debug("LogCallContract event start:")
 			var l logtype.ReceiptEVMContract
 			err := types.Decode(log1.Log, &l)
 			if err != nil {
@@ -225,10 +229,12 @@ func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) {
 			}
 			info.GasUsed = l.UsedGas
 			info.ContractAddress = l.ContractAddr
+			log.Debug("LogCallContract event end:")
 		case logtype.TyLogEVMEventData: //  605: // LogEVMEventData
 			if "" == abi {
 				continue
 			}
+			log.Debug("UnpackEvent event start:")
 			var e types.EVMLog
 			err := types.Decode(log1.Log, &e)
 			if err != nil {
@@ -236,13 +242,17 @@ func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) {
 				log.Error("decode event failed:", "idx", i, "err", err)
 				return
 			}
-			name, args, err := UnpackEvent(abi, e.Topic, string(e.Data))
+			log.Debug("UnpackEvent event start:", "log size", len(log1.Log), "topic size", len(e.Topic), "data size", len(e.Data))
+			name, args, err := UnpackEvent(abi, e.Topic, e.Data)
 			if err != nil {
 				info.Error = "UnpackEvent event failed: " + err.Error()
-				log.Error("UnpackEvent event failed:", "idx", i, "err", err)
+				log.Error("UnpackEvent event failed:", "idx", i, "err", err, "name", name, "args", args)
 				return
 			}
-			info.Events = append(info.Events, EvmEvent{Name: name, Args: args})
+			log.Debug("UnpackEvent event  :", "name", name)
+			if name != "" {
+				info.Events = append(info.Events, EvmEvent{Name: name, Args: args})
+			}
 		}
 	}
 }
@@ -254,16 +264,27 @@ func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) {
 // keccak256("Transfer(address,address,uint256)")
 // 每个 topic 的大小为 32 字节
 
-func UnpackEvent(abiStr string, topics [][]byte, data string) (string, map[string]interface{}, error) {
-	eData := pcom.FromHex(data)
+// return event-name event-args
+func UnpackEvent(abiStr string, topics [][]byte, data []byte) (string, map[string]interface{}, error) {
+	if len(topics) <= 0 {
+		return "", nil, nil
+	}
+	eData := data //pcom.FromHex(data)
+
 	var hashs []pcom.Hash
 	for _, topic := range topics {
 		hashs = append(hashs, pcom.BytesToHash(topic))
 	}
+	log.Debug("event topic", "event", common.ToHex(topics[0][:8]), "topic size", len(topics), "data-size", len(eData))
+
 	contractABI, err := pabi.JSON(strings.NewReader(abiStr))
 	if err != nil {
 		return "", nil, err
 	}
+
+	//for i, x := range contractABI.Events {
+	//	log.Debug("event info", "i", i, "e", x.String())
+	//}
 
 	name, args, err := dbevm.UnpackEvent(eData, hashs, &contractABI)
 	return name, args, err
