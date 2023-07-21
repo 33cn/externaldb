@@ -60,11 +60,13 @@ func UnpackEvent(data []byte, topics []pcom.Hash, abi *pabi.ABI) (name string, a
 	}
 	ans = make(map[string]interface{})
 	// non index arguments
+	log.Info("UnpackEventData", "data", len(data))
 	evt, arg, err := UnpackEventData(data, topics[0], abi)
 	if err != nil {
 		return
 	}
 	name = evt.Name
+	log.Info("UnpackEventData", "name parsed", name)
 	nonIndexed := evt.Inputs.NonIndexed()
 	for i, v := range arg {
 		ans[nonIndexed[i].Name] = v
@@ -98,6 +100,7 @@ func UnpackEvent(data []byte, topics []pcom.Hash, abi *pabi.ABI) (name string, a
 func UnpackEventData(data []byte, topic pcom.Hash, abi *pabi.ABI) (event *pabi.Event, args []interface{}, err error) {
 	event, err = abi.EventByID(topic)
 	if err != nil {
+		log.Error("not found by topic")
 		return
 	}
 	args, err = event.Inputs.UnpackValues(data)
