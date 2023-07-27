@@ -12,6 +12,7 @@ import (
 	"github.com/33cn/chain33/types"
 	"github.com/33cn/chain33/util"
 	"github.com/33cn/externaldb/db"
+	util2 "github.com/33cn/externaldb/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -393,7 +394,7 @@ func createTx(exec string, payload []byte, privkey string) *types.Transaction {
 	tx.Execer = []byte(exec)
 	tx.Nonce = rand.Int63() // nolint
 	tx.Fee = 100000000
-	tx.To = db.ExecAddress(string(tx.Execer))
+	tx.To = util2.AddressConvert(db.ExecAddress(string(tx.Execer)))
 
 	priv := util.HexToPrivkey(privkey)
 	tx.Sign(types.SECP256K1, priv)

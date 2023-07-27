@@ -95,7 +95,7 @@ func (t *msConvert) setupEnv(env *db.TxEnv) {
 	receipt := env.Block.Receipts[env.TxIndex]
 	t.tx = tx
 	t.receipt = receipt
-	t.block = db.SetupBlock(env, tx.From(), common.ToHex(tx.Hash()))
+	t.block = db.SetupBlock(env, util.AddressConvert(tx.From()), common.ToHex(tx.Hash()))
 
 	t.accountIDBty = account.Account{
 		AssetSymbol: t.symbol,
@@ -297,8 +297,8 @@ func makeTransferOp(action *pty.MultiSigExecTransferFrom) TxTransferOperate {
 		Amount:   action.Amount,
 		Note:     action.Note,
 		Execname: action.Execname,
-		To:       action.To,
-		From:     action.From,
+		To:       util.AddressConvert(action.To),
+		From:     util.AddressConvert(action.From),
 	}
 }
 

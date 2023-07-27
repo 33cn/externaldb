@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/33cn/externaldb/db/transaction"
 	"strings"
+
+	"github.com/33cn/externaldb/db/transaction"
 
 	"github.com/33cn/chain33/common"
 	l "github.com/33cn/chain33/common/log/log15"
@@ -143,7 +144,7 @@ func (t *ProofConvert) AddProof(env *db.TxEnv, op int) ([]db.Record, error) {
 	// 签名地址是否有权限,没有直接返回
 	height := env.Block.Block.Height
 	tx := env.Block.Block.Txs[env.TxIndex]
-	fromAddr := tx.From()
+	fromAddr := util.AddressConvert(tx.From())
 
 	if !t.configDB.IsHaveProofPermission(fromAddr) {
 		log.Error("AddProof:IsHaveProofPermission", "err", ErrNoPermission)
@@ -310,7 +311,7 @@ func (t *ProofConvert) addUserInfo(addr string, mapinfo map[string]interface{}) 
 // DelProof 删除存证
 func (t *ProofConvert) DelProof(env *db.TxEnv, op int) ([]db.Record, error) {
 	tx := env.Block.Block.Txs[env.TxIndex]
-	from := tx.From()
+	from := util.AddressConvert(tx.From())
 
 	var d api.DeleteProof
 	err := json.Unmarshal(tx.Payload, &d)
@@ -351,7 +352,7 @@ func (t *ProofConvert) DelProof(env *db.TxEnv, op int) ([]db.Record, error) {
 // RecoverProof 恢复存证
 func (t *ProofConvert) RecoverProof(env *db.TxEnv, op int) ([]db.Record, error) {
 	tx := env.Block.Block.Txs[env.TxIndex]
-	from := tx.From()
+	from := util.AddressConvert(tx.From())
 
 	var d api.RecoverProof
 	err := json.Unmarshal(tx.Payload, &d)
@@ -405,7 +406,7 @@ func (t *ProofConvert) AddTemplate(env *db.TxEnv, op int) ([]db.Record, error) {
 	// 签名地址是否有权限,没有直接返回
 	height := env.Block.Block.Height
 	tx := env.Block.Block.Txs[env.TxIndex]
-	fromAddr := tx.From()
+	fromAddr := util.AddressConvert(tx.From())
 	//判断是否有权限
 	if !t.configDB.IsHaveProofPermission(fromAddr) {
 		log.Error("AddTemplate:IsHaveProofPermission", "err", ErrNoPermission)

@@ -66,7 +66,7 @@ func (e *Convert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "decode to unfreeze action")
 	}
-	block := db.SetupBlock(env, tx.From(), common.ToHex(tx.Hash()))
+	block := db.SetupBlock(env, util.AddressConvert(tx.From()), common.ToHex(tx.Hash()))
 	receipt := e.env.Block.Receipts[e.env.TxIndex]
 	e.block = block
 	e.tx = tx

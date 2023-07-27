@@ -10,6 +10,7 @@ import (
 	fsdb "github.com/33cn/externaldb/db/filesummary/db"
 	proofconfig "github.com/33cn/externaldb/db/proof_config"
 	"github.com/33cn/externaldb/db/transaction"
+	"github.com/33cn/externaldb/util"
 )
 
 var log = l.New("module", "db.file")
@@ -38,7 +39,7 @@ func (c *Convert) convertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	records = append(records, transaction.GetTransactionRecord(env, op))
 
 	// 签名地址是否有权限,没有直接返回
-	fromAddr := tx.From()
+	fromAddr := util.AddressConvert(tx.From())
 	if !c.ConfigDB.IsHaveProofPermission(fromAddr) {
 		log.Error("IsHaveProofPermission", "err", errors.New("ErrNoPermission"))
 		return records, nil

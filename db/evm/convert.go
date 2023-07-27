@@ -133,7 +133,7 @@ func (c *Convert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	txOption.ContractAddr = payload.ContractAddr
 
 	// 签名地址是否有权限,没有直接返回
-	fromAddr := tx.From()
+	fromAddr := util.AddressConvert(tx.From())
 	if !c.ConfigDB.IsHaveProofPermission(fromAddr) {
 		log.Error("ConvertTx.evm:IsHaveProofPermission", "err", errors.New("ErrNoPermission"))
 		return records, nil
@@ -151,7 +151,7 @@ func (c *Convert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 		log.Warn("parseNote", "err", err)
 	}
 	eventLogs := c.parseLog(mapinfo)
-	mapinfo["to_addr"] = tx.To
+	mapinfo["to_addr"] = util.AddressConvert(tx.To)
 	mapinfo["from_addr"] = fromAddr
 	mapinfo["evm_tx_hash"] = common.ToHex(tx.Hash())
 	mapinfo["evm_height_index"] = db.HeightIndex(height, env.TxIndex)

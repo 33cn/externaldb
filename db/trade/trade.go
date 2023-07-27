@@ -150,7 +150,7 @@ func (t *tradeConvert) setupEnv(env *db.TxEnv) {
 	receipt := env.Block.Receipts[env.TxIndex]
 	t.tx = tx
 	t.receipt = receipt
-	t.block = db.SetupBlock(env, tx.From(), common.ToHex(tx.Hash()))
+	t.block = db.SetupBlock(env, util.AddressConvert(tx.From()), common.ToHex(tx.Hash()))
 
 	t.accountIDBty = account.Account{
 		AssetSymbol: t.symbol,

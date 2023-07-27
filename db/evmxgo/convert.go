@@ -116,7 +116,7 @@ func (e *Convert) convertTransfer(action *pty.EvmxgoAction, op int) []db.Record 
 	evmxgoTx := transaction.ConvertTransaction(e.env)
 	options := TxOption{
 		Symbol: v.Cointoken,
-		To:     v.To,
+		To:     util.AddressConvert(v.To),
 		Note:   string(v.Note),
 	}
 	evmxgoTx.Options = &options
@@ -162,7 +162,7 @@ func (e *Convert) convertTransferToExec(action *pty.EvmxgoAction, op int) []db.R
 	evmxgoTx := transaction.ConvertTransaction(e.env)
 	options := TxOption{
 		Symbol:   v.Cointoken,
-		To:       v.To,
+		To:       util.AddressConvert(v.To),
 		ExecName: v.ExecName,
 		Note:     string(v.Note),
 	}
@@ -210,7 +210,7 @@ func (e *Convert) convertWithdraw(action *pty.EvmxgoAction, op int) []db.Record 
 	evmxgoTx := transaction.ConvertTransaction(e.env)
 	options := TxOption{
 		Symbol:   v.Cointoken,
-		To:       v.To,
+		To:       util.AddressConvert(v.To),
 		ExecName: v.ExecName,
 		Note:     string(v.Note),
 	}

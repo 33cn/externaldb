@@ -1,5 +1,7 @@
 package address
 
+import "github.com/33cn/externaldb/util"
+
 const (
 	AccountPersonage = "personage"
 	AccountContract  = "contract"
@@ -14,5 +16,6 @@ type Address struct {
 }
 
 func (c *Address) Key() string {
+	c.Address = util.AddressConvert(c.Address)
 	return AddKeyPrefix(c.Address)
 }
