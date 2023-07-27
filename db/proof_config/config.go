@@ -91,7 +91,7 @@ func (c *Convert) convertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	myDB := NewConfigDB(c.db)
 
 	if OpenAccessControl {
-		from := tx.From()
+		from := util.AddressConvert(tx.From())
 		m, err := myDB.GetMember(from)
 		if err != nil {
 			if err == db.ErrDBNotFound {
@@ -111,7 +111,7 @@ func (c *Convert) convertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	// 记录: role, org, tx
 	rs := make([]db.Record, 0)
 	c.env = env
-	c.block = db.SetupBlock(env, tx.From(), common.ToHex(tx.Hash()))
+	c.block = db.SetupBlock(env, util.AddressConvert(tx.From()), common.ToHex(tx.Hash()))
 
 	if cfg.Op == AddOpX {
 		rs2, err := c.AddMember(myDB, op, &cfg)
@@ -153,7 +153,7 @@ func (c *Convert) convertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 func (c *Convert) DelMember(myDB ConfigDB, blockOp int, cfg *payload) ([]db.Record, error) {
 	rs := make([]db.Record, 0)
 	tx := c.env.Block.Block.Txs[c.env.TxIndex]
-	block := db.SetupBlock(c.env, tx.From(), common.ToHex(tx.Hash()))
+	block := db.SetupBlock(c.env, util.AddressConvert(tx.From()), common.ToHex(tx.Hash()))
 
 	if db.SeqTypeDel == blockOp {
 		// r2 member
@@ -250,8 +250,8 @@ func (c *Convert) DelMember(myDB ConfigDB, blockOp int, cfg *payload) ([]db.Reco
 func (c *Convert) AddMember(myDB ConfigDB, blockOp int, cfg *payload) ([]db.Record, error) {
 	rs := make([]db.Record, 0)
 	tx := c.env.Block.Block.Txs[c.env.TxIndex]
-	from := tx.From()
-	block := db.SetupBlock(c.env, tx.From(), common.ToHex(tx.Hash()))
+	from := util.AddressConvert(tx.From())
+	block := db.SetupBlock(c.env, from, common.ToHex(tx.Hash()))
 
 	if db.SeqTypeDel == blockOp {
 		// r2 member
@@ -326,8 +326,8 @@ func (c *Convert) AddMember(myDB ConfigDB, blockOp int, cfg *payload) ([]db.Reco
 func (c *Convert) SetMember(myDB ConfigDB, blockOp int, cfg *payload) ([]db.Record, error) {
 	rs := make([]db.Record, 0)
 	tx := c.env.Block.Block.Txs[c.env.TxIndex]
-	from := tx.From()
-	block := db.SetupBlock(c.env, tx.From(), common.ToHex(tx.Hash()))
+	from := util.AddressConvert(tx.From())
+	block := db.SetupBlock(c.env, from, common.ToHex(tx.Hash()))
 
 	// 回滚新增：执行删除
 	// 不支持回滚更新，若要达到该效果应将原有内容执行更新
@@ -391,8 +391,8 @@ func (c *Convert) DelOrganizationMember(myDB ConfigDB, cfg *payload) (db.Record,
 // 2. op = 2， 数量减一， 减一为0时改为删除操作
 func (c *Convert) processOrganization(myDB ConfigDB, op int, cfg *payload) (db.Record, error) {
 	tx := c.env.Block.Block.Txs[c.env.TxIndex]
-	from := tx.From()
-	block := db.SetupBlock(c.env, tx.From(), common.ToHex(tx.Hash()))
+	from := util.AddressConvert(tx.From())
+	block := db.SetupBlock(c.env, from, common.ToHex(tx.Hash()))
 
 	o2, err := myDB.GetOrganization(cfg.Organization)
 	if err != nil && err != db.ErrDBNotFound {
@@ -434,7 +434,7 @@ func checkInput(cfg payload) error {
 
 func (c *Convert) delProof(env *db.TxEnv, op int) ([]db.Record, error) {
 	tx := env.Block.Block.Txs[env.TxIndex]
-	from := tx.From()
+	from := util.AddressConvert(tx.From())
 	if !isManager(from) {
 		return nil, errors.New(ErrNoPrivilege)
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/33cn/externaldb/util"
 	"github.com/33cn/go-kit/convert"
 )
 
@@ -92,7 +93,7 @@ func (t *Token) LoadBlockData(data map[string]interface{}) {
 	t.PublishHeight = convert.ToInt64(data["evm_height"])
 	t.PublishHeightIndex = convert.ToInt64(data["evm_height_index"])
 	t.PublishTxHash = convert.ToString(data["evm_tx_hash"])
-	t.ContractAddr = convert.ToString(data["contract_addr"])
+	t.ContractAddr = util.AddressConvert(convert.ToString(data["contract_addr"]))
 }
 
 type Transfer struct {
@@ -136,7 +137,7 @@ func (t *Transfer) LoadBlockData(data map[string]interface{}) {
 func (t *Transfer) GetNewToken() *Token {
 	return &Token{
 		TokenID:            t.TokenID,
-		Owner:              t.To,
+		Owner:              util.AddressConvert(t.To),
 		TokenType:          t.TokenType,
 		Amount:             t.Amount,
 		ContractAddr:       t.ContractAddr,

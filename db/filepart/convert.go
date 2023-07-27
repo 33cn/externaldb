@@ -8,6 +8,7 @@ import (
 	"github.com/33cn/externaldb/db"
 	fpdb "github.com/33cn/externaldb/db/filepart/db"
 	proofconfig "github.com/33cn/externaldb/db/proof_config"
+	"github.com/33cn/externaldb/util"
 )
 
 var log = l.New("module", "db.file_part")
@@ -27,7 +28,7 @@ func (c *Convert) convertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	records := make([]db.Record, 0)
 
 	// 签名地址是否有权限,没有直接返回
-	if !c.ConfigDB.IsHaveProofPermission(tx.From()) {
+	if !c.ConfigDB.IsHaveProofPermission(util.AddressConvert(tx.From())) {
 		log.Error("IsHaveProofPermission", "err", errors.New("ErrNoPermission"))
 		return records, nil
 	}

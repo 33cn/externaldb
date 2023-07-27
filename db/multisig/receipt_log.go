@@ -9,6 +9,7 @@ import (
 
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/account"
+	"github.com/33cn/externaldb/util"
 	pty "github.com/33cn/plugin/plugin/dapp/multisig/types"
 )
 
@@ -256,7 +257,7 @@ func (t *msConvert) TyLogMultiSigAccCreate(v []byte, op int) ([]db.Record, error
 
 	var records []db.Record
 	ms := &MS{
-		CreateAddr:     t.tx.From(),
+		CreateAddr:     util.AddressConvert(t.tx.From()),
 		MultiSigAddr:   l.MultiSigAddr,
 		TxCount:        l.TxCount,
 		RequiredWeight: l.RequiredWeight,

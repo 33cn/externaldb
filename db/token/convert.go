@@ -127,7 +127,7 @@ func (e *Convert) convertPreCreate(action *pty.TokenAction, op int) []db.Record 
 		Symbol:        v.Symbol,
 		Amount:        v.Total,
 		Owner:         v.Owner,
-		Creator:       e.env.Block.Block.Txs[e.env.TxIndex].From(),
+		Creator:       util.AddressConvert(e.env.Block.Block.Txs[e.env.TxIndex].From()),
 		Introduction:  v.Introduction,
 		Price:         v.Price,
 		Category:      int64(v.Category),
@@ -326,7 +326,7 @@ func (e *Convert) convertTransfer(action *pty.TokenAction, op int) []db.Record {
 	tokenTx := transaction.ConvertTransaction(e.env)
 	options := TxOption{
 		Symbol: v.Cointoken,
-		To:     v.To,
+		To:     util.AddressConvert(v.To),
 		Note:   string(v.Note),
 	}
 	tokenTx.Options = &options
@@ -372,7 +372,7 @@ func (e *Convert) convertTransferToExec(action *pty.TokenAction, op int) []db.Re
 	tokenTx := transaction.ConvertTransaction(e.env)
 	options := TxOption{
 		Symbol:   v.Cointoken,
-		To:       v.To,
+		To:       util.AddressConvert(v.To),
 		ExecName: v.ExecName,
 		Note:     string(v.Note),
 	}
@@ -420,7 +420,7 @@ func (e *Convert) convertWithdraw(action *pty.TokenAction, op int) []db.Record {
 	tokenTx := transaction.ConvertTransaction(e.env)
 	options := TxOption{
 		Symbol:   v.Cointoken,
-		To:       v.To,
+		To:       util.AddressConvert(v.To),
 		ExecName: v.ExecName,
 		Note:     string(v.Note),
 	}

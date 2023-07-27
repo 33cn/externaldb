@@ -62,7 +62,7 @@ func (t *coinsConvert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	receipt := env.Block.Receipts[env.TxIndex]
 	t.tx = env.Block.Block.Txs[env.TxIndex]
 	t.receipt = receipt
-	t.block = db.SetupBlock(env, t.tx.From(), common.ToHex(t.tx.Hash()))
+	t.block = db.SetupBlock(env, util.AddressConvert(t.tx.From()), common.ToHex(t.tx.Hash()))
 
 	var records []db.Record
 

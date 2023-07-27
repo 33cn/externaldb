@@ -6,6 +6,7 @@ import (
 	l "github.com/33cn/chain33/common/log/log15"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/evm"
+	"github.com/33cn/externaldb/util"
 	"github.com/33cn/go-kit/convert"
 )
 
@@ -34,8 +35,8 @@ func TransferSingle(c *evm.Convert, op int, data evm.EVM) ([]db.Record, error) {
 	trans := &evm.Transfer{}
 	trans.TokenID = convert.ToString(event["id"])
 	trans.Amount = convert.ToInt64(event["value"])
-	trans.To = convert.ToString(event["to"])
-	trans.From = convert.ToString(event["from"])
+	trans.To = util.AddressConvert(convert.ToString(event["to"]))
+	trans.From = util.AddressConvert(convert.ToString(event["from"]))
 	trans.Operator = convert.ToString(event["operator"])
 	trans.TokenType = convert.ToString(ERC1155)
 	trans.LoadBlockData(data)
@@ -100,7 +101,7 @@ func getFromToken(c *evm.Convert, trans *evm.Transfer, dbTokens ...*evm.Token) (
 			err = db.ErrDBNotFound
 		}
 	} else {
-		oldT, err = c.EvmTokenDb.GetToken(trans.ContractAddr, trans.From, trans.TokenID)
+		oldT, err = c.EvmTokenDb.GetToken(trans.ContractAddr, util.AddressConvert(trans.From), trans.TokenID)
 	}
 	return oldT, err
 }
@@ -114,7 +115,7 @@ func getToToken(c *evm.Convert, trans *evm.Transfer, dbTokens ...*evm.Token) (*e
 			err = db.ErrDBNotFound
 		}
 	} else {
-		newT, err = c.EvmTokenDb.GetToken(trans.ContractAddr, trans.From, trans.TokenID)
+		newT, err = c.EvmTokenDb.GetToken(trans.ContractAddr, util.AddressConvert(trans.From), trans.TokenID)
 	}
 	return newT, err
 }
@@ -154,8 +155,8 @@ func TransferBatch(c *evm.Convert, op int, data evm.EVM) ([]db.Record, error) {
 				trans := &evm.Transfer{}
 				trans.TokenID = idsStr[i]
 				trans.Amount = convert.ToInt64(vals[i])
-				trans.To = to
-				trans.From = from
+				trans.To = util.AddressConvert(to)
+				trans.From = util.AddressConvert(from)
 				trans.Operator = operator
 				trans.TokenType = convert.ToString(ERC1155)
 

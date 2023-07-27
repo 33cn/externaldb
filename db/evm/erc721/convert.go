@@ -4,6 +4,7 @@ import (
 	l "github.com/33cn/chain33/common/log/log15"
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/evm"
+	"github.com/33cn/externaldb/util"
 	"github.com/33cn/go-kit/convert"
 )
 
@@ -32,9 +33,9 @@ func Transfer(c *evm.Convert, op int, data evm.EVM) ([]db.Record, error) {
 	}
 	trans := &evm.Transfer{}
 	trans.TokenID = convert.ToString(event["tokenId"])
-	trans.From = convert.ToString(event["from"])
-	trans.To = convert.ToString(event["to"])
-	trans.Operator = convert.ToString(data["from_addr"])
+	trans.From = util.AddressConvert(convert.ToString(event["from"]))
+	trans.To = util.AddressConvert(convert.ToString(event["to"]))
+	trans.Operator = util.AddressConvert(convert.ToString(data["from_addr"]))
 	trans.Amount = 1
 	trans.TokenType = convert.ToString(ERC721)
 	trans.LoadBlockData(data)

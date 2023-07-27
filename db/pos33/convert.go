@@ -139,7 +139,7 @@ func (t *pos33TicketConvert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, erro
 	receipt := env.Block.Receipts[env.TxIndex]
 	t.tx = tx
 	t.receipt = receipt
-	t.block = db.SetupBlock(env, tx.From(), common.ToHex(tx.Hash()))
+	t.block = db.SetupBlock(env, util.AddressConvert(tx.From()), common.ToHex(tx.Hash()))
 
 	t.accountIDYcc = account.Account{
 		AssetSymbol: t.symbol,
@@ -461,7 +461,7 @@ func (t *pos33TicketConvert) GetMinerAddr() (*transaction.AddrRecord, error) {
 		addrRecord.VoterAddr = append(addrRecord.VoterAddr, res.Data)
 	}
 	// 获得打包地址
-	addrRecord.MakerAddr = []string{t.tx.From()}
+	addrRecord.MakerAddr = []string{util.AddressConvert(t.tx.From())}
 
 	return &addrRecord, nil
 }
