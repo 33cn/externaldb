@@ -18,6 +18,7 @@ var blockSupportKey = map[string]bool{
 // Tx Tx
 type Tx struct {
 	*DBRead
+	ChainGrpc string
 }
 
 // BlockInfo BlockInfo
@@ -70,6 +71,31 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 	r, err := t.search(transaction.TransactionX, transaction.TransactionX, q, decodeTransaction)
 	if err != nil {
 		return err
+	}
+
+	// 找出amount
+	evm := Evm{DBRead: t.DBRead, ChainGrpc: t.ChainGrpc}
+	for _, tx1 := range r {
+		tx2, ok := tx1.(transaction.Transaction)
+		if !ok {
+			continue
+		}
+		if tx2.Amount != 0 {
+			continue
+		}
+		if !isEvmTx(string(tx2.Execer)) {
+			continue
+		}
+		host := t.ChainGrpc
+		detail, err := getTxDetailFromChain33(host, tx2.Hash)
+		if err != nil {
+			log.Error("TxList", "getTxDetailFromChain33", err.Error())
+			*out = err.Error()
+			continue
+		}
+
+		parsed := parseEvmTx(detail, evm.get)
+		tx2.Amount = int64(parsed.Amount)
 	}
 	*out = r
 	return nil
