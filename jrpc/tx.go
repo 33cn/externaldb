@@ -76,7 +76,7 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 	// 找出amount
 	evm := Evm{DBRead: t.DBRead, ChainGrpc: t.ChainGrpc}
 	for _, tx1 := range r {
-		tx2, ok := tx1.(transaction.Transaction)
+		tx2, ok := tx1.(*transaction.Transaction)
 		if !ok {
 			continue
 		}
