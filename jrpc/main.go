@@ -79,7 +79,7 @@ func main() {
 		server.Register(&token)
 
 		//tx server
-		tx := Tx{DBRead: convDB, ChainGrpc: chain.GrpcHost}
+		tx := Tx{DBRead: convDB, ChainGrpc: chain.GrpcHost, Symbol: chain.Symbol}
 		server.Register(&tx)
 
 		//block stat server

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/33cn/externaldb/db/transaction"
 	"github.com/33cn/externaldb/escli"
@@ -19,6 +20,7 @@ var blockSupportKey = map[string]bool{
 type Tx struct {
 	*DBRead
 	ChainGrpc string
+	Symbol    string
 }
 
 // BlockInfo BlockInfo
@@ -96,6 +98,17 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 
 		parsed := parseEvmTx(detail, evm.get)
 		tx2.Amount = int64(parsed.Amount)
+		if tx2.Assets == nil || len(tx2.Assets) == 0 {
+			var asset transaction.Asset
+			asset.Amount = tx2.Amount
+			asset.Exec = tx2.Execer
+			if strings.HasSuffix(string(asset.Exec), ".evm") {
+				asset.Symbol = "Para"
+			} else {
+				asset.Symbol = "BTY"
+			}
+			tx2.Assets = append(tx2.Assets, asset)
+		}
 	}
 	*out = r
 	return nil
