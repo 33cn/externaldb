@@ -12,22 +12,12 @@ import (
 	"google.golang.org/grpc"
 
 	dbevm "github.com/33cn/externaldb/db/evm"
+	"github.com/33cn/externaldb/db/transaction"
 	pabi "github.com/33cn/plugin/plugin/dapp/evm/executor/abi"
 	pcom "github.com/33cn/plugin/plugin/dapp/evm/executor/vm/common"
 	logtype "github.com/33cn/plugin/plugin/dapp/evm/types"
 	etypes "github.com/ethereum/go-ethereum/core/types"
 )
-
-func analysisTx(txHash string) string {
-	tx, err := getTxDetailFromChain33("", "")
-	if err != nil {
-		return ""
-	}
-	args := parseEvmTx(tx, func(string) (string, error) { return "", nil })
-	events := getEvent("")
-	_, _ = args, events
-	return ""
-}
 
 // Chain33.QueryTransaction TransactionDetail
 func getTxDetailFromChain33(host string, txHash string) (txDetail *types.TransactionDetail, err error) {
@@ -61,6 +51,7 @@ type EvmTxInfo struct {
 	ContractAddress string
 	CallAddress     string
 	Amount          uint64
+	Asset           transaction.Asset
 	GasLimit        uint64
 
 	ExecSuccess      bool
@@ -102,7 +93,7 @@ func isEvmTx(execer string) bool {
 // 1. 部署合约, 执行器为 evm, 地址为 evm地址, 类型为部署
 // 2. 合约功能, 执行器为 evm, 地址为 合约地址,  类型为合约功能
 // 3. 转账功能, 执行器为 evm, 地址为 evm地址, 类型为合约功能
-func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, error)) *EvmTxInfo {
+func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, error), symbol string) *EvmTxInfo {
 	var info EvmTxInfo
 	isEvm := isEvmTx(string(txDetail.Tx.Execer))
 	if !isEvm {
@@ -123,8 +114,15 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 
 	info.ContractAddress = payload.ContractAddr
 	info.CallAddress = txDetail.Tx.From()
-	info.Amount = payload.Amount
 	info.GasLimit = payload.GasLimit
+	info.Amount = payload.Amount
+	info.Asset.Amount = int64(payload.Amount)
+	info.Asset.Exec = string(txDetail.Tx.Execer)
+	if strings.HasSuffix(string(info.Asset.Exec), ".evm") {
+		info.Asset.Symbol = "Para"
+	} else {
+		info.Asset.Symbol = symbol
+	}
 
 	// note 作为交易evm交易的内容
 	ntx := new(etypes.Transaction)

@@ -24,6 +24,7 @@ import (
 type Evm struct {
 	*DBRead
 	ChainGrpc string
+	Symbol    string
 }
 
 // SaveAbiRequest
@@ -94,7 +95,7 @@ func (t *Evm) ParseTx(q *ParseEvmTxRequest, out *interface{}) error {
 		return nil
 	}
 
-	parsed := parseEvmTx(detail, t.get)
+	parsed := parseEvmTx(detail, t.get, t.Symbol)
 	*out = *parsed
 	return nil
 }
