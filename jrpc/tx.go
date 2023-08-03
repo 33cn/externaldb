@@ -76,7 +76,7 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 	}
 
 	// 找出amount
-	evm := Evm{DBRead: t.DBRead, ChainGrpc: t.ChainGrpc}
+	evm := Evm{DBRead: t.DBRead, ChainGrpc: t.ChainGrpc, Symbol: t.Symbol}
 	for _, tx1 := range r {
 		tx2, ok := tx1.(*transaction.Transaction)
 		if !ok {
@@ -96,7 +96,7 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 			continue
 		}
 
-		parsed := parseEvmTx(detail, evm.get)
+		parsed := parseEvmTx(detail, evm.get, t.Symbol)
 		tx2.Amount = int64(parsed.Amount)
 		if tx2.Assets == nil || len(tx2.Assets) == 0 {
 			var asset transaction.Asset
