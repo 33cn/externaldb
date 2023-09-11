@@ -29,6 +29,7 @@ func getTxDetailFromChain33(host string, txHash string) (txDetail *types.Transac
 	if err != nil {
 		return
 	}
+	defer conn.Close()
 
 	client := types.NewChain33Client(conn)
 	txDetail, err = client.QueryTransaction(context.TODO(), &types.ReqHash{Hash: hash})
