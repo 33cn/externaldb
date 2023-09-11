@@ -39,7 +39,9 @@ var (
 func InitDB(cfg *proto.ConfigNew) {
 	InitWriteDB(cfg.ConvertEs, cfg.EsVersion)
 	InitSeqStore(cfg)
+	log.Info("InitDB", "init seq from db", "begin")
 	InitSeqNum(cfg)
+	log.Info("InitDB", "init seq from db", "end")
 	db.SetVersion(cfg.EsVersion)
 	db.SetAddrID(cfg.Convert.AddressDriver)
 	InitContract(cfg)
