@@ -129,15 +129,15 @@ func (t *Account) loadAsset() ([]*totalAsset, error) {
 	}
 
 	q := &querypara.Query{
-		Range:    []*querypara.QRange{{Key: "total", GT: 0}},
-		MatchOne: []*querypara.QMatch{{Key: "exec", Value: ""}, {Key: "exec", Value: "16htvcBNSEA7fZhAdLJphDwQRQJaHpyHTp"}},
-		Not:      []*querypara.QMatch{{Key: "type", Value: "contract"}},
-		Filter:   []*querypara.QMatch{{Key: "asset_symbol", Value: t.Symbol}, {Key: "asset_exec", Value: "coins"}},
+		Range: []*querypara.QRange{{Key: "total", GT: 0}},
+		// MatchOne: []*querypara.QMatch{{Key: "exec", Value: ""}, {Key: "exec", Value: "16htvcBNSEA7fZhAdLJphDwQRQJaHpyHTp"}},
+		Not:    []*querypara.QMatch{{Key: "type", Value: "contract"}},
+		Filter: []*querypara.QMatch{{Key: "asset_symbol", Value: t.Symbol}, {Key: "asset_exec", Value: "coins"}},
 	}
 
 	a := &querypara.Agg{
 		Name:  "total",
-		Size:  &querypara.ASize{Size: 100000},
+		Size:  &querypara.ASize{Size: 10000},
 		Order: &querypara.AOrder{Key: "total", Asc: false},
 		Term:  &querypara.AAgg{Key: "address"},
 		Subs: &querypara.ASub{
