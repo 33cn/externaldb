@@ -14,7 +14,7 @@ func TestParseEvmDeploy(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, detail.Tx.Nonce)
 
-	parsed := parseEvmTx(detail, testGetAbi)
+	parsed := parseEvmTx(detail, testGetAbi, "bty")
 	assert.Equal(t, "", parsed)
 }
 
@@ -41,7 +41,7 @@ func TestParseEvmCall(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, detail.Tx.Nonce)
 
-	parsed := parseEvmTx(detail, testGetAbi)
+	parsed := parseEvmTx(detail, testGetAbi, "bty")
 	assert.Equal(t, "", parsed)
 }
 
@@ -52,7 +52,7 @@ func TestParseEvmTransfer(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 1, detail.Tx.Nonce)
 
-	parsed := parseEvmTx(detail, testGetAbi)
+	parsed := parseEvmTx(detail, testGetAbi, "bty")
 	assert.Equal(t, "", parsed)
 }
 
