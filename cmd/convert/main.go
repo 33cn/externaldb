@@ -84,6 +84,7 @@ func main() {
 	convert.InitDB(cfg)
 	// 启动服务
 	convertService := convert.NewConvertService(cfg)
+	log.Info("main   ", "init", "convertService")
 	go convertService.Start()
 
 	gracefulCLoseConvert()

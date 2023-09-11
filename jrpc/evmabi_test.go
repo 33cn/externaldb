@@ -17,6 +17,38 @@ type testAbiSaveRequst struct {
 	Params []interface{} `json:"params"`
 }
 
+func TestSaveEvmAbi2(t *testing.T) {
+	url := "https://mainnet.bityuan.com/btydata/bityuan"
+	address := LuckyPackageContract
+	abi := LuckyPakcageAbi
+	doSaveEvmAbi(t, url, address, abi)
+}
+
+func doSaveEvmAbi(t *testing.T, url string, address string, abi string) {
+
+	param := SaveAbiRequest{
+		Address: address,
+		Abi:     common.ToHex([]byte(abi)),
+	}
+	req := testAbiSaveRequst{
+		Method: "Evm.SaveAbi",
+		Params: []interface{}{param},
+	}
+
+	bs, err := json.Marshal(req)
+	assert.Nil(t, err)
+	assert.Equal(t, "", string(bs))
+
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(bs))
+	assert.Nil(t, err)
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	assert.Nil(t, err)
+	assert.Equal(t, "", string(body))
+}
+
 func TestSaveEvmAbi(t *testing.T) {
 	url := "http://183.134.99.137:9993/testdex"
 	param := SaveAbiRequest{
