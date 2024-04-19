@@ -35,7 +35,7 @@ type ExecerResponse struct {
 	TxCount int64  `json:"tx_count"`
 }
 
-//TxCount 交易数
+// TxCount 交易数
 func (t *Tx) TxCount(q *querypara.Query, out *interface{}) error {
 	if q == nil {
 		return errors.New(ErrBadParm)
@@ -49,7 +49,7 @@ func (t *Tx) TxCount(q *querypara.Query, out *interface{}) error {
 	return nil
 }
 
-//TxCounts 获取多组查询条件的交易数
+// TxCounts 获取多组查询条件的交易数
 func (t *Tx) TxCounts(reqs []*querypara.Query, out *interface{}) error {
 	assets := make([]int64, 0)
 	for _, req := range reqs {
@@ -64,7 +64,7 @@ func (t *Tx) TxCounts(reqs []*querypara.Query, out *interface{}) error {
 	return nil
 }
 
-//TxList 全部交易列表接口
+// TxList 全部交易列表接口
 func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 	if q == nil {
 		return errors.New(ErrBadParm)
@@ -97,7 +97,21 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 		}
 
 		parsed := parseEvmTx(detail, evm.get, t.Symbol)
+		// 初始asset 可能有默认的空值
+		log.Info("TxList", "getTxDetailFromChain33", parsed)
 		tx2.Amount = int64(parsed.Amount)
+		log.Info("TxList", "asset 2", tx2.Assets)
+		if len(tx2.Assets) == 1 && tx2.Assets[1].Amount == 0 {
+			tx2.Assets[1].Amount = tx2.Amount
+			tx2.Assets[1].Exec = tx2.Execer
+			if strings.HasSuffix(string(tx2.Assets[1].Exec), ".evm") {
+				tx2.Assets[1].Symbol = "Para"
+			} else {
+				tx2.Assets[1].Symbol = "BTY"
+			}
+			log.Info("TxList", "asset 1", tx2.Assets)
+		}
+
 		if tx2.Assets == nil || len(tx2.Assets) == 0 {
 			var asset transaction.Asset
 			asset.Amount = tx2.Amount
@@ -109,6 +123,7 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 			}
 			tx2.Assets = append(tx2.Assets, asset)
 		}
+		log.Info("TxList", "asset 0", tx2.Assets)
 	}
 	*out = r
 	return nil
@@ -131,7 +146,7 @@ func (t *Tx) ExecerInfo(name string, out *interface{}) error {
 	return nil
 }
 
-//BlockList 全部区块列表接口
+// BlockList 全部区块列表接口
 func (t *Tx) BlockList(q *querypara.Query, out *interface{}) error {
 	err := checkQuery(q, blockSupportKey)
 	if err != nil {

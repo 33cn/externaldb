@@ -125,6 +125,12 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 		info.Asset.Symbol = symbol
 	}
 
+	// 处理特殊的合约: 使用evm 合约调用go合约
+	// 由于 没有solidity编译产生的abi, 所以这里插入处理
+	if info.ContractAddress == EvmCallGoAddr {
+		return parseEvmCallGoTx(&info, payload.Para)
+	}
+
 	// note 作为交易evm交易的内容
 	ntx := new(etypes.Transaction)
 	ntxRaw, err := common.FromHex(payload.Note)
