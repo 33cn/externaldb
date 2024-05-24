@@ -144,7 +144,7 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 	if err != nil {
 		info.ParseSuccess = false
 		info.Error = "parse eth-th failed: " + err.Error()
-		log.Error("ParseTx", " Tx ", info.Error)
+		log.Error("ParseTx", " Tx ", info.Error, "hash", common.ToHex(txDetail.Tx.Tx().Hash()))
 		return &info
 	}
 
