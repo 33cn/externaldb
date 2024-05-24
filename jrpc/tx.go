@@ -72,8 +72,10 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 
 	r, err := t.search(transaction.TransactionX, transaction.TransactionX, q, decodeTransaction)
 	if err != nil {
+		log.Error("TxList", "search", err.Error())
 		return err
 	}
+	log.Info("TxList", "search return r0", len(r))
 
 	// 找出amount
 	evm := Evm{DBRead: t.DBRead, ChainGrpc: t.ChainGrpc, Symbol: t.Symbol}
@@ -88,6 +90,7 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 		if !isEvmTx(string(tx2.Execer)) {
 			continue
 		}
+		//log.Info("TxList", "search return r", "4", "index", tx2.Index, "hash", tx2.Hash)
 		host := t.ChainGrpc
 		detail, err := getTxDetailFromChain33(host, tx2.Hash)
 		if err != nil {
@@ -96,7 +99,12 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 			continue
 		}
 
+		log.Info("TxList", "search return r", "6", "index", tx2.Index, "hash", tx2.Hash)
 		parsed := parseEvmTx(detail, evm.get, t.Symbol)
+		if parsed == nil || parsed.Error != "" {
+			log.Error("TxList", "parseEvmTx", parsed.Error)
+			continue
+		}
 		// 初始asset 可能有默认的空值
 		log.Info("TxList", "getTxDetailFromChain33", parsed)
 		tx2.Amount = int64(parsed.Amount)
