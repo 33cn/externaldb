@@ -56,7 +56,7 @@ func parseEvmCallGoTx(info *EvmTxInfo, para []byte) *EvmTxInfo {
 			info.Asset.Amount = cAction.GetWithdraw().Amount
 		case coinsTypes.CoinsActionTransferToExec:
 			info.Amount = uint64(cAction.GetTransferToExec().Amount)
-			info.Asset.Amount = cAction.GetWithdraw().Amount
+			info.Asset.Amount = cAction.GetTransferToExec().Amount
 		default:
 			log.Info("switch ty", "in", cAction.Ty, "1th", coinsTypes.CoinsActionWithdraw, "2nd", coinsTypes.CoinsActionTransferToExec)
 		}
