@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/33cn/chain33/common"
@@ -164,7 +165,7 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 		// parsy log 603 for detail
 		//str := fmt.Sprintf("deploy contract: ")
 		info.Func.FuncName = "deploy_contract"
-		parseLogs("", txDetail, &info)
+		_ = parseLogs("", txDetail, &info)
 		info.Func.Args = fmt.Sprintf("{\"contract\": \"%v\"}", info.ContractAddress)
 		return &info
 	}
@@ -186,7 +187,11 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 	info.Func.Args = arg
 
 	// 2. 解析调用功能产生的事件
-	parseLogs(abi, txDetail, &info)
+	amount := parseLogs(abi, txDetail, &info)
+	if info.Amount == 0 {
+		info.Amount = amount
+		info.Asset.Amount = int64(amount)
+	}
 
 	return &info
 }
@@ -216,10 +221,12 @@ func parseParam(abiStr string, data []byte, m map[string]interface{}) (string, s
 	return pm["call_func_name"].(string), string(buf), nil
 }
 
-func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) {
+func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) uint64 {
 	if tx.Receipt.Ty == 2 {
 		info.ExecSuccess = true
 	}
+
+	amount := uint64(0)
 
 	for i, log1 := range tx.Receipt.Logs {
 		switch log1.Ty {
@@ -230,7 +237,7 @@ func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) {
 			if err != nil {
 				info.Error = "decode log failed: " + err.Error()
 				log.Error("decode log failed:", "err", err)
-				return
+				return amount
 			}
 			info.GasUsed = l.UsedGas
 			info.ContractAddress = l.ContractAddr
@@ -245,21 +252,33 @@ func parseLogs(abi string, tx *types.TransactionDetail, info *EvmTxInfo) {
 			if err != nil {
 				info.Error = "decode event failed: " + err.Error()
 				log.Error("decode event failed:", "idx", i, "err", err)
-				return
+				return amount
 			}
 			log.Debug("UnpackEvent event start:", "log size", len(log1.Log), "topic size", len(e.Topic), "data size", len(e.Data))
 			name, args, err := UnpackEvent(abi, e.Topic, e.Data)
 			if err != nil {
 				info.Error = "UnpackEvent event failed: " + err.Error()
 				log.Error("UnpackEvent event failed:", "idx", i, "err", err, "name", name, "args", args)
-				return
+				return amount
 			}
 			log.Debug("UnpackEvent event  :", "name", name)
 			if name != "" {
 				info.Events = append(info.Events, EvmEvent{Name: name, Args: args})
 			}
+			for k1, v1 := range args {
+				if k1 == "amount" {
+					b1 := v1.(*big.Int)
+					divisor := big.NewInt(1e10)
+					b1 = b1.Div(b1, divisor)
+					amount = b1.Uint64()
+					//t := reflect.TypeOf(v1)
+					log.Debug("UnpackEvent event  :", "amount", amount, "value", v1)
+
+				}
+			}
 		}
 	}
+	return amount
 }
 
 // 日志对象的数组，包含了由交易执行过程中触发的合约事件生成的日志条目
