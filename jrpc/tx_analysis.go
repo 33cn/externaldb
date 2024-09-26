@@ -50,6 +50,9 @@ type EvmTxInfo struct {
 	ParseSuccess bool
 	Error        string
 
+	EvmTxId     string
+	Chain33TxId string
+
 	ContractAddress string
 	CallAddress     string
 	Amount          uint64
@@ -141,6 +144,7 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 		log.Error("ParseTx", "Decode Tx Note", err.Error())
 		return &info
 	}
+
 	err = ntx.UnmarshalBinary(ntxRaw)
 	if err != nil {
 		info.ParseSuccess = false
@@ -148,6 +152,11 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 		log.Error("ParseTx", " Tx ", info.Error, "hash", common.ToHex(txDetail.Tx.Tx().Hash()))
 		return &info
 	}
+
+	evmId := ntx.Hash().Bytes()
+	evmIdStr := common.ToHex(evmId)
+	info.EvmTxId = evmIdStr
+	info.Chain33TxId = common.ToHex(txDetail.Tx.Tx().Hash())
 
 	// coins 转账
 	if len(ntx.Data()) == 0 {

@@ -24,6 +24,20 @@ func TestSaveEvmAbi2(t *testing.T) {
 	doSaveEvmAbi(t, url, address, abi)
 }
 
+func TestSaveEvmAbi22(t *testing.T) {
+	url := "https://mainnet.bityuan.com/btydata/bityuan"
+	address := LuckyPackageContract2
+	abi := LuckyPakcageAbi2
+	doSaveEvmAbi(t, url, address, abi)
+}
+
+func TestSaveEvmAbi23(t *testing.T) {
+	url := "https://mainnet.bityuan.com/btydata/bityuan"
+	address := LuckyPackageContract3
+	abi := LuckyPakcageAbi3
+	doSaveEvmAbi(t, url, address, abi)
+}
+
 func doSaveEvmAbi(t *testing.T, url string, address string, abi string) {
 
 	param := SaveAbiRequest{
