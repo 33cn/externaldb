@@ -130,6 +130,7 @@ func (c *Convert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 		log.Error(c.positionID(), "info", "decode payload error convert tx", "error", err)
 		return records, nil
 	}
+	trans.Amount = int64(payload.Amount)
 	txOption.ContractAddr = payload.ContractAddr
 
 	// 签名地址是否有权限,没有直接返回
