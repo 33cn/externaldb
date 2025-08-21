@@ -119,6 +119,65 @@ func (mod *ModuleConvert) BlockProc() {
 	}
 }
 
+// BlockProc deal block 修复指定高度
+func (mod *ModuleConvert) BlockProcFixTool() {
+
+	syncSeqNum := lastOne
+	//currentSeqNum, err := LastSyncSeq(mod.WriteDB, mod.Name)
+
+	var currentSeqNum int64
+	currentSeqNum = firstOne
+
+	//若seq记录未发生变化则不重复打印日志
+	if currentSeqN != currentSeqNum || syncSeqN != syncSeqNum {
+		log.Debug("dealBlock", "cur", currentSeqNum, "sync", syncSeqNum)
+		currentSeqN = currentSeqNum
+		syncSeqN = syncSeqNum
+	}
+
+	for currentSeqNum <= syncSeqNum {
+		if ConvertServerStatus.Closed() {
+			return
+		}
+		blockSeq, err := mod.SeqStore.GetSeq(currentSeqNum)
+		if err != nil {
+			// 在已经同步到的高度, 却没有找到对应的seq-block,
+			// es中没有事务, 可能是 seq先更新, seq-block后完成索引导致
+			if err == db.ErrDBNotFound {
+				if currentSeqNum < syncSeqNum {
+					currentSeqNum++
+					continue
+				}
+				log.Error("Position not read, again", "seq", currentSeqNum, "err", err)
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+			time.Sleep(1 * time.Second)
+			log.Error("BlockProc GetSyncBlock", "err", err, "seq", currentSeqNum, "module", mod.Name)
+			continue
+		} else if blockSeq == nil && err == nil {
+			log.Error("BlockProc blockSeq is nil", "err", err, "seq", currentSeqNum, "module", mod.Name)
+			continue
+		}
+
+		records, err := mod.dealBlock(blockSeq)
+		if err != nil {
+			log.Error("BlockProc", "err", err, "block", blockSeq, "module", mod.Name)
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		err = SaveToES(mod.WriteDB, records)
+		if err != nil {
+			log.Error("BlockProc", "err", err, "block", blockSeq, "module", mod.Name, "op", "save")
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		currentSeqNum = currentSeqNum + 1
+	}
+}
+
 func (mod *ModuleConvert) dealBlock(blockSeq *block.Seq) ([]db.Record, error) {
 	var detail types.BlockDetail
 	err := types.Decode(blockSeq.BlockDetail, &detail)

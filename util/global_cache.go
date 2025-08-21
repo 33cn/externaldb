@@ -14,7 +14,36 @@ type lastSyncSeqCache struct {
 	number int64
 }
 
+var (
+	lastOne  = int64(30000000) //  int64(41642275)
+	firstOne = int64(20000000) // 40049898
+
+	//againLast  = int64(30000000)
+	//againFirst = int64(20000000)
+)
+
 var LastSyncSeqCache = &lastSyncSeqCache{number: -1}
+
+func InitLastSyncSeqCacheFixTool(client escli.ESClient, id string, startSeq int64) error {
+	//currentSeqNum, err := LastSyncSeq(client, id)
+	var err error
+	_ = err
+	currentSeqNum := firstOne
+	if err != nil {
+		log.Error("InitLastSyncSeqCache failed", "err", err, "module", id)
+		return err
+	}
+	if currentSeqNum == -1 {
+		log.Info("last_seq 从ES获取失败，自动使用配置文件sync.startSeq")
+	}
+	if currentSeqNum < startSeq {
+		currentSeqNum = startSeq - 1
+	}
+	log.Info("last_seq 处理成功", "当前last_seq ", currentSeqNum)
+	// 前面步骤，底层包在查询ES的last_seq不存在时，会输出ERROR错误日志，为了方便查看，这里也在ERROR的位置输出last_seq 处理成功, 便于理解
+	log.Error("ES last_seq 自动修复处理完毕", "当前last_seq ", currentSeqNum)
+	return LastSyncSeqCache.SetNumber(currentSeqNum)
+}
 
 func InitLastSyncSeqCache(client escli.ESClient, id string, startSeq int64) error {
 	currentSeqNum, err := LastSyncSeq(client, id)

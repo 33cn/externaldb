@@ -94,12 +94,13 @@ doc: swag
 code_gen: swag
 
 build: code_gen ## Build the binary file
-	@go build $(BUILD_FLAGS) -v -i -o  $(PRC) $(SRC_RPC)
-	@go build $(BUILD_FLAGS) -v -i -o  $(CLI_SYNC) $(SRC_CLI)/sync
-	@go build $(BUILD_FLAGS) -v -i -o  $(CLI_CONVERT) $(SRC_CLI)/convert
-	@go build $(BUILD_FLAGS) -v -i -o  build/rpc $(SRC)/rpc/
-	@go build $(BUILD_FLAGS) -v -i -o  build/dummy_node $(SRC_CLI)/dummy_node/
-	@go build $(BUILD_FLAGS) -v -i -o  build/sync_convert $(SRC_CLI)/sync_convert
+	@go build $(BUILD_FLAGS) -v -o  $(PRC) $(SRC_RPC)
+	@go build $(BUILD_FLAGS) -v -o  $(CLI_SYNC) $(SRC_CLI)/sync
+	@go build $(BUILD_FLAGS) -v -o  $(CLI_CONVERT) $(SRC_CLI)/convert
+	@go build $(BUILD_FLAGS) -v -o  build/convertfix $(SRC_CLI)/convert-fix-tool/
+	@go build $(BUILD_FLAGS) -v -o  build/rpc $(SRC)/rpc/
+	@go build $(BUILD_FLAGS) -v -o  build/dummy_node $(SRC_CLI)/dummy_node/
+	@go build $(BUILD_FLAGS) -v -o  build/sync_convert $(SRC_CLI)/sync_convert
 	@cp config/externaldb.toml build/externaldb.toml
 
 .PHONY: build_convert
