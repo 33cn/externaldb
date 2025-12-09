@@ -133,17 +133,20 @@ func (c *Convert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	trans.Amount = int64(payload.Amount)
 	txOption.ContractAddr = payload.ContractAddr
 
-	// 签名地址是否有权限,没有直接返回
 	fromAddr := util.AddressConvert(tx.From())
-	if !c.ConfigDB.IsHaveProofPermission(fromAddr) {
-		log.Error("ConvertTx.evm:IsHaveProofPermission", "err", errors.New("ErrNoPermission"))
-		return records, nil
-	}
+	// 签名地址是否有权限,没有直接返回
+	isProof := false
+	if isProof {
+		if !c.ConfigDB.IsHaveProofPermission(fromAddr) {
+			log.Error("ConvertTx.evm:IsHaveProofPermission", "err", errors.New("ErrNoPermission"))
+			return records, nil
+		}
 
-	_, err = c.ConfigDB.GetOrganizationName(fromAddr)
-	if err != nil {
-		log.Error("ConvertTx.evm:GetOrganizationName", "err", err, "addr", fromAddr)
-		return records, nil
+		_, err = c.ConfigDB.GetOrganizationName(fromAddr)
+		if err != nil {
+			log.Error("ConvertTx.evm:GetOrganizationName", "err", err, "addr", fromAddr)
+			return records, nil
+		}
 	}
 
 	mapinfo := make(map[string]interface{})
