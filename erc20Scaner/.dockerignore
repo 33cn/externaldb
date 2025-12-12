@@ -1,0 +1,53 @@
+# Docker忽略文件
+*.md
+*.log
+*.tmp
+.git
+.gitignore
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# 构建产物
+scanner/scanner
+rpc/rpc-server
+erc20Scaner
+*.exe
+*.dll
+*.so
+*.dylib
+
+# 测试文件
+*_test.go
+testdata/
+cli_test.go
+
+# 文档
+docs/
+*.md
+!README.md
+
+# 配置文件（使用.env）
+.env
+config.yaml
+!config.yaml.example
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 日志
+logs/
+*.log
+
+# Docker相关
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# 临时文件
+tmp/
+temp/

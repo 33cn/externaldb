@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  # MySQL数据库服务
+  mysql:
+    image: mysql:8.0
+    container_name: erc20-scanner-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-token_scanner}
+      MYSQL_USER: ${MYSQL_USER:-scanner}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-scannerpass}
+      TZ: Asia/Shanghai
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./mysql.cnf:/etc/mysql/conf.d/custom.cnf:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - erc20-network
+
+  # ERC20扫描器服务
+  scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile.scanner
+    container_name: erc20-scanner
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - NODE_URL=${NODE_URL:-https://mainnet.bityuan.com/eth}
+      - START_BLOCK=${START_BLOCK:-42399544}
+      - END_BLOCK=${END_BLOCK:--1}
+      - ENABLE_DB=true
+      - DB_DSN=${MYSQL_USER:-scanner}:${MYSQL_PASSWORD:-scannerpass}@tcp(mysql:3306)/${MYSQL_DATABASE:-token_scanner}?charset=utf8mb4&parseTime=True&loc=Local
+      - TZ=Asia/Shanghai
+    volumes:
+      - scanner_logs:/app/logs
+    networks:
+      - erc20-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # RPC API服务
+  rpc:
+    build:
+      context: .
+      dockerfile: Dockerfile.rpc
+    container_name: erc20-scanner-rpc
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      scanner:
+        condition: service_started
+    environment:
+      - PORT=${RPC_PORT:-8080}
+      - DB_DSN=${MYSQL_USER:-scanner}:${MYSQL_PASSWORD:-scannerpass}@tcp(mysql:3306)/${MYSQL_DATABASE:-token_scanner}?charset=utf8mb4&parseTime=True&loc=Local
+      - TZ=Asia/Shanghai
+    ports:
+      - "${RPC_PORT:-8080}:8080"
+    volumes:
+      - rpc_logs:/app/logs
+    networks:
+      - erc20-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mysql_data:
+    driver: local
+  scanner_logs:
+    driver: local
+  rpc_logs:
+    driver: local
+
+networks:
+  erc20-network:
+    driver: bridge
+
