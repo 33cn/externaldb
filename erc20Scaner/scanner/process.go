@@ -236,7 +236,7 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 
 	//block := detail.Block
 	//var block *types.Block
-	block, err := p.cli.BlockByNumber(p.startPoint)
+	block, err := p.cli.BlockByNumber(uint64(detail.Block.Height))
 	if err != nil {
 		fmt.Println("err:", err)
 		return err
