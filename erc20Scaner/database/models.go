@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -103,6 +104,17 @@ type Event struct {
 	CreatedAt       time.Time  `db:"created_at"`
 }
 
+// ScanProgress 扫描进度模型
+type ScanProgress struct {
+	ID               uint64    `db:"id"`
+	LastBlockNumber  uint64    `db:"last_block_number"`
+	LastBlockHash    string    `db:"last_block_hash"`
+	LastBlockTime    time.Time `db:"last_block_time"`
+	ProcessedTxCount uint64    `db:"processed_tx_count"`
+	UpdatedAt        time.Time `db:"updated_at"`
+	CreatedAt        time.Time `db:"created_at"`
+}
+
 // DB 数据库操作接口
 type DB struct {
 	conn *sql.DB
@@ -130,6 +142,83 @@ func NewDB(dsn string) (*DB, error) {
 // Close 关闭数据库连接
 func (db *DB) Close() error {
 	return db.conn.Close()
+}
+
+// InitScanProgressTable 初始化扫描进度表
+func (db *DB) InitScanProgressTable() error {
+	query := `CREATE TABLE IF NOT EXISTS scan_progress (
+		id BIGINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '主键ID(固定为1，确保只有一条记录)',
+		last_block_number BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '最后处理的区块号',
+		last_block_hash VARCHAR(66) DEFAULT NULL COMMENT '最后处理的区块哈希',
+		last_block_time DATETIME DEFAULT NULL COMMENT '最后处理的区块时间',
+		processed_tx_count BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '已处理的交易总数',
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+		PRIMARY KEY (id)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='扫描进度表'`
+
+	_, err := db.conn.Exec(query)
+	if err != nil {
+		return err
+	}
+
+	// 确保有一条初始记录
+	insertQuery := `INSERT IGNORE INTO scan_progress (id, last_block_number, processed_tx_count) VALUES (1, 0, 0)`
+	_, err = db.conn.Exec(insertQuery)
+	return err
+}
+
+// GetScanProgress 获取扫描进度
+func (db *DB) GetScanProgress() (*ScanProgress, error) {
+	// 确保表存在
+	if err := db.InitScanProgressTable(); err != nil {
+		return nil, fmt.Errorf("failed to init scan progress table: %w", err)
+	}
+
+	query := `SELECT * FROM scan_progress ORDER BY id DESC LIMIT 1`
+
+	progress := &ScanProgress{}
+	err := db.conn.QueryRow(query).Scan(
+		&progress.ID,
+		&progress.LastBlockNumber,
+		&progress.LastBlockHash,
+		&progress.LastBlockTime,
+		&progress.ProcessedTxCount,
+		&progress.UpdatedAt,
+		&progress.CreatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		// 如果没有记录，返回nil，表示需要从配置的起始高度开始
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return progress, nil
+}
+
+// UpdateScanProgress 更新扫描进度
+func (db *DB) UpdateScanProgress(blockNumber uint64, blockHash string, blockTime time.Time, processedTxCount uint64) error {
+	// 确保表存在
+	if err := db.InitScanProgressTable(); err != nil {
+		return fmt.Errorf("failed to init scan progress table: %w", err)
+	}
+
+	// 使用 INSERT ... ON DUPLICATE KEY UPDATE 来确保只有一条记录
+	query := `INSERT INTO scan_progress (
+		id, last_block_number, last_block_hash, last_block_time, processed_tx_count
+	) VALUES (1, ?, ?, ?, ?)
+	ON DUPLICATE KEY UPDATE
+		last_block_number = VALUES(last_block_number),
+		last_block_hash = VALUES(last_block_hash),
+		last_block_time = VALUES(last_block_time),
+		processed_tx_count = VALUES(processed_tx_count),
+		updated_at = CURRENT_TIMESTAMP`
+
+	_, err := db.conn.Exec(query, blockNumber, blockHash, blockTime, processedTxCount)
+	return err
 }
 
 // GetFunctionSignature 根据选择器获取函数签名

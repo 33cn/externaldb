@@ -12,6 +12,7 @@ type Config struct {
 	Node     NodeConfig     `yaml:"node"`
 	Scanner  ScannerConfig  `yaml:"scanner"`
 	Database DatabaseConfig `yaml:"database"`
+	ES       ESConfig       `yaml:"es"`
 	Log      LogConfig      `yaml:"log"`
 }
 
@@ -30,6 +31,16 @@ type ScannerConfig struct {
 type DatabaseConfig struct {
 	Enabled bool   `yaml:"enabled"`
 	DSN     string `yaml:"dsn"`
+}
+
+// ESConfig ES配置
+type ESConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	Host     string `yaml:"host"`
+	Prefix   string `yaml:"prefix"`
+	Version  int32  `yaml:"version"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
 }
 
 // LogConfig 日志配置
@@ -72,6 +83,14 @@ func GetDefaultConfig() *Config {
 			Enabled: false,
 			DSN:     "root:password@tcp(localhost:3306)/token_scanner?charset=utf8mb4&parseTime=True&loc=Local",
 		},
+		ES: ESConfig{
+			Enabled:  false,
+			Host:     "http://localhost:9200/",
+			Prefix:   "seq01_",
+			Version:  7,
+			User:     "",
+			Password: "",
+		},
 		Log: LogConfig{
 			Level: "info",
 			File:  "",
@@ -80,7 +99,7 @@ func GetDefaultConfig() *Config {
 }
 
 // MergeWithFlags 合并命令行参数（命令行参数优先级更高）
-func (c *Config) MergeWithFlags(nodeURL *string, startBlock, endBlock *int64, enableDB *bool, dbDSN *string) {
+func (c *Config) MergeWithFlags(nodeURL *string, startBlock, endBlock *int64, enableDB *bool, dbDSN *string, esEnabled *bool, esHost, esPrefix *string, esVersion *int32, esUser, esPassword *string) {
 	if nodeURL != nil && *nodeURL != "" {
 		c.Node.URL = *nodeURL
 	}
@@ -95,5 +114,23 @@ func (c *Config) MergeWithFlags(nodeURL *string, startBlock, endBlock *int64, en
 	}
 	if dbDSN != nil && *dbDSN != "" {
 		c.Database.DSN = *dbDSN
+	}
+	if esEnabled != nil {
+		c.ES.Enabled = *esEnabled
+	}
+	if esHost != nil && *esHost != "" {
+		c.ES.Host = *esHost
+	}
+	if esPrefix != nil && *esPrefix != "" {
+		c.ES.Prefix = *esPrefix
+	}
+	if esVersion != nil {
+		c.ES.Version = *esVersion
+	}
+	if esUser != nil && *esUser != "" {
+		c.ES.User = *esUser
+	}
+	if esPassword != nil && *esPassword != "" {
+		c.ES.Password = *esPassword
 	}
 }

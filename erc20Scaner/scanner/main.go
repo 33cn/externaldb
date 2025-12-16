@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/33cn/externaldb/erc20Scaner/config"
+	"github.com/33cn/externaldb/escli"
 )
 
 var (
@@ -16,6 +17,13 @@ var (
 	endPoint   = flag.Int64("e", 0, "end point (overrides config, use -1 for unlimited)")
 	enableDB   = flag.Bool("db", false, "enable database write (overrides config)")
 	dbDSN      = flag.String("dsn", "", "database DSN (overrides config)")
+	// ES相关参数
+	esEnabled  = flag.Bool("es", false, "enable ES mode (read blocks from ES, overrides config)")
+	esHost     = flag.String("es-host", "", "ES host (overrides config)")
+	esPrefix   = flag.String("es-prefix", "", "ES prefix (overrides config)")
+	esVersion  = flag.Int("es-version", 0, "ES version (6 or 7, overrides config)")
+	esUser     = flag.String("es-user", "", "ES username (overrides config)")
+	esPassword = flag.String("es-pwd", "", "ES password (overrides config)")
 	// 42241940-42241949 34562327- deploy contract
 	// 42399545-42399546 token transfer
 	//
@@ -44,6 +52,12 @@ func main() {
 	var endBlock *int64
 	var dbEnabled *bool
 	var dbDSNStr *string
+	var esEnabledFlag *bool
+	var esHostFlag *string
+	var esPrefixFlag *string
+	var esVersionFlag *int32
+	var esUserFlag *string
+	var esPasswordFlag *string
 
 	flag.Visit(func(f *flag.Flag) {
 		switch f.Name {
@@ -53,6 +67,19 @@ func main() {
 			endBlock = endPoint
 		case "db":
 			dbEnabled = enableDB
+		case "es":
+			esEnabledFlag = esEnabled
+		case "es-host":
+			esHostFlag = esHost
+		case "es-prefix":
+			esPrefixFlag = esPrefix
+		case "es-version":
+			v := int32(*esVersion)
+			esVersionFlag = &v
+		case "es-user":
+			esUserFlag = esUser
+		case "es-pwd":
+			esPasswordFlag = esPassword
 		}
 	})
 
@@ -60,7 +87,8 @@ func main() {
 		dbDSNStr = dbDSN
 	}
 
-	cfg.MergeWithFlags(nodeURL, startBlock, endBlock, dbEnabled, dbDSNStr)
+	cfg.MergeWithFlags(nodeURL, startBlock, endBlock, dbEnabled, dbDSNStr,
+		esEnabledFlag, esHostFlag, esPrefixFlag, esVersionFlag, esUserFlag, esPasswordFlag)
 
 	// 打印最终配置
 	fmt.Println("=== Configuration ===")
@@ -75,6 +103,15 @@ func main() {
 	if cfg.Database.Enabled {
 		fmt.Printf("Database DSN: %s\n", maskDSN(cfg.Database.DSN))
 	}
+	fmt.Printf("ES Enabled: %v\n", cfg.ES.Enabled)
+	if cfg.ES.Enabled {
+		fmt.Printf("ES Host: %s\n", cfg.ES.Host)
+		fmt.Printf("ES Prefix: %s\n", cfg.ES.Prefix)
+		fmt.Printf("ES Version: %d\n", cfg.ES.Version)
+		if cfg.ES.User != "" {
+			fmt.Printf("ES User: %s\n", cfg.ES.User)
+		}
+	}
 	fmt.Println("===================")
 
 	// 初始化并启动
@@ -84,9 +121,25 @@ func main() {
 	p.enableDB = cfg.Database.Enabled
 	p.dbDSN = cfg.Database.DSN
 	p.nodeURL = cfg.Node.URL
-	p.Init()
-	defer p.Close()
-	p.Start()
+
+	// 如果启用了ES模式，优先使用ES读取区块
+	if cfg.ES.Enabled {
+		log.Printf("ES mode enabled, reading blocks from ES: %s (prefix: %s)", cfg.ES.Host, cfg.ES.Prefix)
+		esClient, err := escli.NewESLongConnect(cfg.ES.Host, cfg.ES.Prefix, cfg.ES.Version, cfg.ES.User, cfg.ES.Password)
+		if err != nil {
+			log.Fatalf("Failed to connect to ES: %v", err)
+		}
+		log.Printf("ES connection established successfully")
+		p.Init()
+		defer p.Close()
+		p.StartWithEsClient(esClient)
+	} else {
+		// 使用节点模式
+		log.Printf("Node mode enabled, reading blocks from node: %s", cfg.Node.URL)
+		p.Init()
+		defer p.Close()
+		p.Start()
+	}
 }
 
 // maskDSN 隐藏DSN中的密码

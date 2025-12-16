@@ -15,8 +15,11 @@ import (
 	"strings"
 	"time"
 
+	chain33types "github.com/33cn/chain33/types"
+	"github.com/33cn/externaldb/db/block"
 	"github.com/33cn/externaldb/erc20Scaner/database"
 	"github.com/33cn/externaldb/erc20Scaner/erc20abi/generated"
+	"github.com/33cn/externaldb/escli"
 )
 
 // Process 业务处理模块
@@ -28,6 +31,7 @@ type Process struct {
 	dbDSN      string
 	db         *database.DB
 	nodeURL    string
+	esClient   escli.ESClient // ES客户端，用于从ES读取区块
 }
 
 // Init 初始化模块
@@ -46,7 +50,74 @@ func (p *Process) Init() {
 			p.enableDB = false
 		} else {
 			log.Printf("Database connection established successfully")
+			// 读取上次处理的进度
+			progress, err := p.db.GetScanProgress()
+			if err != nil {
+				log.Printf("Failed to get scan progress: %v, will start from configured start point", err)
+			} else if progress != nil {
+				// 如果存在进度记录，从上次处理的高度+1开始
+				p.startPoint = progress.LastBlockNumber + 1
+				log.Printf("Resume from last processed block: %d, will start from block: %d",
+					progress.LastBlockNumber, p.startPoint)
+			} else {
+				log.Printf("No previous progress found, will start from configured start point: %d", p.startPoint)
+			}
 		}
+	}
+}
+
+// StartWithEsClient 从ES读取区块并处理evm交易
+func (p *Process) StartWithEsClient(esClient escli.ESClient) {
+	p.esClient = esClient
+	for {
+		// 检查是否到达结束点
+		if p.endPoint > 0 && p.startPoint >= uint64(p.endPoint) {
+			time.Sleep(time.Second)
+			continue
+		}
+
+		// 从ES读取区块
+		blockSeq, err := p.getBlockFromES(int64(p.startPoint))
+		if err != nil {
+			fmt.Printf("getBlockFromES err: %v, seq: %d\n", err, p.startPoint)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		if blockSeq == nil {
+			// 区块不存在，等待
+			time.Sleep(time.Second)
+			continue
+		}
+
+		// 解析区块
+		err = p.parseBlockFromES(blockSeq)
+		if err != nil {
+			fmt.Printf("parseBlockFromES err: %v, seq: %d\n", err, p.startPoint)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		// 更新处理进度
+		if p.enableDB && p.db != nil {
+			// 从blockSeq中获取区块信息
+			var detail chain33types.BlockDetail
+			err = chain33types.Decode(blockSeq.BlockDetail, &detail)
+			if err == nil {
+				blockTime := time.Unix(int64(detail.Block.BlockTime), 0)
+				err = p.db.UpdateScanProgress(
+					uint64(detail.Block.Height),
+					blockSeq.Hash,
+					blockTime,
+					0, // processed_tx_count 可以根据需要统计
+				)
+				if err != nil {
+					log.Printf("Failed to update scan progress: %v", err)
+				}
+			}
+		}
+
+		p.startPoint++
 	}
 }
 
@@ -72,13 +143,27 @@ func (p *Process) Start() {
 			fmt.Println("err:", err)
 			continue
 		}
-		p.startPoint++
 		err = p.ParaseBlock(block)
 		if err != nil {
 			fmt.Println("ParaseBlock err:", err)
-			p.startPoint--
 			continue
 		}
+
+		// 更新处理进度
+		if p.enableDB && p.db != nil {
+			blockTime := time.Unix(int64(block.Time()), 0)
+			err = p.db.UpdateScanProgress(
+				block.NumberU64(),
+				block.Hash().Hex(),
+				blockTime,
+				0, // processed_tx_count 可以根据需要统计
+			)
+			if err != nil {
+				log.Printf("Failed to update scan progress: %v", err)
+			}
+		}
+
+		p.startPoint++
 	}
 
 }
@@ -90,6 +175,144 @@ func (p *Process) Close() error {
 	if p.db != nil {
 		return p.db.Close()
 	}
+	return nil
+}
+
+// getBlockFromES 从ES获取区块
+func (p *Process) getBlockFromES(seqNum int64) (*block.Seq, error) {
+	if p.esClient == nil {
+		return nil, fmt.Errorf("esClient is nil")
+	}
+
+	id := fmt.Sprintf("%d", seqNum)
+	result, err := p.esClient.Get(block.StatusDB, block.StatusDB, id)
+	if err != nil {
+		return nil, err
+	}
+
+	var seq block.Seq
+	err = json.Unmarshal([]byte(*result), &seq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &seq, nil
+}
+
+// isEvmExecer 检查执行器是否是evm
+func isEvmExecer(execer string) bool {
+	return execer == "evm" || strings.HasSuffix(execer, ".evm")
+}
+
+// parseBlockFromES 解析从ES获取的区块
+func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
+	if blockSeq == nil {
+		return fmt.Errorf("blockSeq is nil")
+	}
+
+	// 解码BlockDetail
+	var detail chain33types.BlockDetail
+	err := chain33types.Decode(blockSeq.BlockDetail, &detail)
+	if err != nil {
+		return fmt.Errorf("decode BlockDetail failed: %w", err)
+	}
+
+	fmt.Printf("Processing block from ES: height=%d, seq=%d, txCount=%d\n",
+		detail.Block.Height, blockSeq.SyncSeq, len(detail.Block.Txs))
+
+	// 遍历交易，查找evm交易
+	evmtxs := make([]int, 0)
+	for i, tx := range detail.Block.Txs {
+		// 检查执行器是否是evm
+		if !isEvmExecer(string(tx.Execer)) {
+			continue
+		}
+		evmtxs = append(evmtxs, i)
+	}
+
+	if len(evmtxs) == 0 {
+		return nil
+	}
+
+	//block := detail.Block
+	//var block *types.Block
+	block, err := p.cli.BlockByNumber(p.startPoint)
+	if err != nil {
+		fmt.Println("err:", err)
+		return err
+	}
+	txs := block.Transactions()
+
+	fmt.Println("startPoint:", p.startPoint, "txsnum:", len(txs))
+	for _, idx := range evmtxs {
+		err := p.processTransactionWithReceipt(txs[idx], block)
+		if err != nil {
+			// 处理失败不影响其他交易的处理
+			fmt.Printf("processTransactionWithReceipt error: %v, tx: %s\n", err, txs[idx].Hash().Hex())
+		}
+	}
+
+	return nil
+}
+
+// handleContractCreation 处理合约创建
+func (p *Process) handleContractCreation(tx *types.Transaction, receipt *types.Receipt, block *types.Block) error {
+	if receipt == nil || receipt.ContractAddress == (common.Address{}) {
+		return fmt.Errorf("invalid receipt or contract address")
+	}
+
+	// 检查是否为ERC20合约
+	isERC20, err := p.checkERC20BySelector(&receipt.ContractAddress)
+	if err != nil {
+		return fmt.Errorf("checkERC20BySelector failed: %w", err)
+	}
+	if !isERC20 {
+		return nil // 不是ERC20合约，跳过
+	}
+
+	// 获取合约信息
+	decimals, err := p.unPackageAbi("decimals", &receipt.ContractAddress)
+	if err != nil {
+		return err
+	}
+	cname, err := p.unPackageAbi("name", &receipt.ContractAddress)
+	if err != nil {
+		return err
+	}
+	symbol, err := p.unPackageAbi("symbol", &receipt.ContractAddress)
+	if err != nil {
+		return err
+	}
+	supply, err := p.unPackageAbi("totalSupply", &receipt.ContractAddress)
+	if err != nil {
+		return err
+	}
+
+	ut := time.Unix(int64(block.Time()), 0)
+	cst, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+	fmt.Println("contract address:", receipt.ContractAddress)
+	fmt.Println("contract name:", cname)
+	fmt.Println("contract symbol:", symbol)
+	fmt.Println("contract totalSupply:", supply)
+	fmt.Println("contract decimals:", decimals)
+	fmt.Println("contract deploy time:", ut.In(cst))
+	fmt.Println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+
+	// 写入数据库
+	if p.enableDB {
+		err = p.saveContractToDB(receipt, block, tx, cname, symbol, decimals, supply)
+		if err != nil {
+			log.Printf("Failed to save contract to database: %v, contract: %s", err, receipt.ContractAddress.Hex())
+		} else {
+			log.Printf("Contract saved to database: %s", receipt.ContractAddress.Hex())
+		}
+	}
+
 	return nil
 }
 
@@ -105,109 +328,63 @@ func (p *Process) ParaseBlock(block *types.Block) error {
 
 	fmt.Println("startPoint:", p.startPoint, "txsnum:", len(txs))
 	for _, tx := range txs {
-
-		if tx.To() == nil {
-			//合约创建交易
-
-			receipt, err := p.cli.TxReceipt(tx.Hash())
-			if err != nil {
-				return err
-			}
-
-			// 这里假设是ERC20的合约创建交易
-			// 添加通过"检查函数选择器"校验是否是ERC20的合约地址
-			if receipt != nil {
-				// 先检查函数选择器，确认是否为ERC20合约
-				isERC20, err := p.checkERC20BySelector(&receipt.ContractAddress)
-				if err != nil {
-					fmt.Printf("checkERC20BySelector error: %v, contract: %s\n", err, receipt.ContractAddress.Hex())
-					// 如果检查失败，跳过该合约
-					continue
-				}
-				if !isERC20 {
-					fmt.Printf("Contract %s is not ERC20, skip\n", receipt.ContractAddress.Hex())
-					continue
-				}
-				fmt.Printf("Contract %s passed ERC20 selector check\n", receipt.ContractAddress.Hex())
-				//log.Info("receipt:", receipt)
-				if receipt.Status != types.ReceiptStatusSuccessful {
-					fmt.Println("receipt status is ", receipt.Status)
-					return err
-				}
-				//成功的交易
-				fmt.Println("evmaddress:", receipt.ContractAddress)
-
-				//decimals
-				decimals, err := p.unPackageAbi("decimals", &receipt.ContractAddress)
-				if err != nil {
-					return err
-				}
-				cname, err := p.unPackageAbi("name", &receipt.ContractAddress)
-				if err != nil {
-					return err
-				}
-				symbol, err := p.unPackageAbi("symbol", &receipt.ContractAddress)
-				if err != nil {
-					return err
-				}
-				supply, err := p.unPackageAbi("totalSupply", &receipt.ContractAddress)
-				if err != nil {
-					return err
-				}
-				ut := time.Unix(int64(block.Time()), 0)
-				fmt.Println("debug ut:", ut)
-				cst, err := time.LoadLocation("Asia/Shanghai")
-				if err != nil {
-					fmt.Println("debug load location error:", err.Error())
-					continue
-				}
-				fmt.Println("debug cst:", cst.String())
-				fmt.Println("debug ut:", ut.In(cst).Format("2006-01-02 15:04:05"))
-
-				fmt.Println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-				fmt.Println("contract address:", receipt.ContractAddress)
-				fmt.Println("contract name:", cname)
-				fmt.Println("contract symbol:", symbol)
-				fmt.Println("contract totalSupply:", supply)
-				fmt.Println("contract decimals:", decimals)
-				fmt.Println("contract deploy time:", ut.In(cst))
-				fmt.Println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-
-				// 写入数据库
-				if p.enableDB {
-					err = p.saveContractToDB(receipt, block, tx, cname, symbol, decimals, supply)
-					if err != nil {
-						log.Printf("Failed to save contract to database: %v, contract: %s", err, receipt.ContractAddress.Hex())
-					} else {
-						log.Printf("Contract saved to database: %s", receipt.ContractAddress.Hex())
-					}
-				}
-			}
-		} else {
-			// token transfer or contract call
-			// tx.Hash().Hex() = evm-Hash
-			receipt, err := p.cli.TxReceipt(tx.Hash())
-			if err != nil {
-				fmt.Printf("Transaction TxReceipt failed, status: %s\n", err)
-				continue
-			}
-			if receipt == nil {
-				continue
-			}
-			if receipt.Status != types.ReceiptStatusSuccessful {
-				fmt.Printf("Transaction %s failed, status: %d\n", tx.Hash().Hex(), receipt.Status)
-				continue
-			}
-
-			// 解析erc20的token transfer 更详细的解析
-			err = p.parseERC20Transfer(tx, receipt, block)
-			if err != nil {
-				// 解析失败不影响其他交易的处理
-				fmt.Printf("parseERC20Transfer error: %v, tx: %s\n", err, tx.Hash().Hex())
-			}
+		err := p.processTransactionWithReceipt(tx, block)
+		if err != nil {
+			// 处理失败不影响其他交易的处理
+			fmt.Printf("processTransactionWithReceipt error: %v, tx: %s\n", err, tx.Hash().Hex())
 		}
 	}
 	return nil
+}
+
+// processTransactionWithReceipt 获取receipt并处理交易
+func (p *Process) processTransactionWithReceipt(tx *types.Transaction, block *types.Block) error {
+	// 获取交易receipt
+	receipt, err := p.cli.TxReceipt(tx.Hash())
+	if err != nil {
+		return fmt.Errorf("failed to get transaction receipt: %w", err)
+	}
+
+	if receipt == nil {
+		return fmt.Errorf("receipt is nil for tx: %s", tx.Hash().Hex())
+	}
+
+	// 检查交易状态
+	if receipt.Status != types.ReceiptStatusSuccessful {
+		return fmt.Errorf("transaction failed, status: %d, tx: %s", receipt.Status, tx.Hash().Hex())
+	}
+
+	// 根据交易类型处理
+	if tx.To() == nil {
+		// 合约创建交易
+		return p.processContractCreation(tx, receipt, block)
+	} else {
+		// 合约调用交易（token transfer or contract call）
+		return p.parseERC20Transfer(tx, receipt, block)
+	}
+}
+
+// processContractCreation 处理合约创建交易
+func (p *Process) processContractCreation(tx *types.Transaction, receipt *types.Receipt, block *types.Block) error {
+	if receipt.ContractAddress == (common.Address{}) {
+		return fmt.Errorf("contract address is empty")
+	}
+
+	// 先检查函数选择器，确认是否为ERC20合约
+	isERC20, err := p.checkERC20BySelector(&receipt.ContractAddress)
+	if err != nil {
+		fmt.Printf("checkERC20BySelector error: %v, contract: %s\n", err, receipt.ContractAddress.Hex())
+		// 如果检查失败，跳过该合约
+		return nil
+	}
+	if !isERC20 {
+		fmt.Printf("Contract %s is not ERC20, skip\n", receipt.ContractAddress.Hex())
+		return nil
+	}
+	fmt.Printf("Contract %s passed ERC20 selector check\n", receipt.ContractAddress.Hex())
+
+	// 使用统一的处理函数
+	return p.handleContractCreation(tx, receipt, block)
 }
 
 func (p *Process) unPackageAbi(methodName string, cAddress *common.Address) (interface{}, error) {
