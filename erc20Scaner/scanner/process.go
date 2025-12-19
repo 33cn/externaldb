@@ -22,6 +22,19 @@ import (
 	"github.com/33cn/externaldb/escli"
 )
 
+// normalizeAddress 规范化地址，统一转换为小写
+// 以太坊地址是大小写不敏感的，统一转换为小写便于比较和查询
+func normalizeAddress(address string) string {
+	if address == "" {
+		return address
+	}
+	// 保持0x前缀，将后面的字符转换为小写
+	if strings.HasPrefix(address, "0x") || strings.HasPrefix(address, "0X") {
+		return "0x" + strings.ToLower(address[2:])
+	}
+	return strings.ToLower(address)
+}
+
 // Process 业务处理模块
 type Process struct {
 	cli        *Client
@@ -679,7 +692,8 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 
 		// 检查合约是否已经记录到数据库, 如果没有需要通过合约地址查询合约信息并检查是否为erc20合约
 		// 如果是erc20合约, 需要在数据库中记录合约信息
-		_, err := p.db.GetContractByAddress(contractAddress.Hex())
+		// 规范化地址为小写，确保大小写不敏感查询
+		_, err := p.db.GetContractByAddress(normalizeAddress(contractAddress.Hex()))
 		if err != nil {
 			// 合约不在数据库中，需要查询并保存
 			log.Printf("Contract not found in database: %s, querying contract info...", contractAddress.Hex())
@@ -879,7 +893,7 @@ func (p *Process) saveContractToDB(receipt *types.Receipt, block *types.Block, t
 	}
 
 	contract := &database.Contract{
-		ContractAddress:    receipt.ContractAddress.Hex(),
+		ContractAddress:    normalizeAddress(receipt.ContractAddress.Hex()),
 		ContractName:       fmt.Sprintf("%v", name),
 		ContractSymbol:     fmt.Sprintf("%v", symbol),
 		ContractType:       "ERC20",
@@ -888,7 +902,7 @@ func (p *Process) saveContractToDB(receipt *types.Receipt, block *types.Block, t
 		DeployTxHash:       tx.Hash().Hex(),
 		DeployBlockNumber:  block.NumberU64(),
 		DeployBlockTime:    time.Unix(int64(block.Time()), 0),
-		DeployerAddress:    deployerAddr,
+		DeployerAddress:    normalizeAddress(deployerAddr),
 		VerificationStatus: 1,
 		VerifiedFunctions:  string(verifiedFuncsJSON),
 	}
@@ -959,7 +973,7 @@ func (p *Process) saveContractInfoFromAddress(contractAddress *common.Address, b
 
 	// 对于已存在的合约，我们没有部署交易信息，使用默认值
 	contract := &database.Contract{
-		ContractAddress:    contractAddress.Hex(),
+		ContractAddress:    normalizeAddress(contractAddress.Hex()),
 		ContractName:       fmt.Sprintf("%v", cname),
 		ContractSymbol:     fmt.Sprintf("%v", symbol),
 		ContractType:       "ERC20",
@@ -1022,9 +1036,9 @@ func (p *Process) saveTransactionToDB(tx *types.Transaction, receipt *types.Rece
 		BlockHash:       block.Hash().Hex(),
 		BlockTime:       time.Unix(int64(block.Time()), 0),
 		TxIndex:         uint(receipt.TransactionIndex),
-		FromAddress:     fromAddr,
-		ToAddress:       toAddr,
-		ContractAddress: contractAddress.Hex(),
+		FromAddress:     normalizeAddress(fromAddr),
+		ToAddress:       normalizeAddress(toAddr),
+		ContractAddress: normalizeAddress(contractAddress.Hex()),
 		FuncSelector:    funcSelector,
 		FuncName:        funcName,
 		Value:           value,
@@ -1053,11 +1067,11 @@ func (p *Process) saveEventToDB(transfer *TransferInfo, block *types.Block, txHa
 		BlockNumber:     block.NumberU64(),
 		BlockTime:       time.Unix(int64(block.Time()), 0),
 		LogIndex:        logIndex,
-		ContractAddress: transfer.TokenAddress.Hex(),
+		ContractAddress: normalizeAddress(transfer.TokenAddress.Hex()),
 		EventName:       "Transfer",
 		EventSignature:  transferEventSig.Hex(),
-		FromAddress:     transfer.From.Hex(),
-		ToAddress:       transfer.To.Hex(),
+		FromAddress:     normalizeAddress(transfer.From.Hex()),
+		ToAddress:       normalizeAddress(transfer.To.Hex()),
 		Value:           transfer.Value,
 		Topic0:          transferEventSig.Hex(),
 		Topic1:          common.BytesToHash(transfer.From.Bytes()).Hex(),
@@ -1074,8 +1088,8 @@ func (p *Process) updateBalanceInDB(address, contractAddress common.Address, bal
 	}
 
 	return p.db.UpdateTokenBalance(
-		address.Hex(),
-		contractAddress.Hex(),
+		normalizeAddress(address.Hex()),
+		normalizeAddress(contractAddress.Hex()),
 		balance,
 		txHash.Hex(),
 		blockNumber,

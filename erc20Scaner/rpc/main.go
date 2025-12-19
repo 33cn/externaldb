@@ -178,14 +178,18 @@ func handleContractAddressTransfersImpl(w http.ResponseWriter, r *http.Request, 
 	address := parts[2]
 
 	// 验证地址格式
-	if !strings.HasPrefix(contractAddress, "0x") || len(contractAddress) != 42 {
+	if !strings.HasPrefix(strings.ToLower(contractAddress), "0x") || len(contractAddress) != 42 {
 		writeError(w, http.StatusBadRequest, "Invalid contract address format")
 		return
 	}
-	if !strings.HasPrefix(address, "0x") || len(address) != 42 {
+	if !strings.HasPrefix(strings.ToLower(address), "0x") || len(address) != 42 {
 		writeError(w, http.StatusBadRequest, "Invalid address format")
 		return
 	}
+
+	// 规范化地址为小写
+	contractAddress = normalizeAddress(contractAddress)
+	address = normalizeAddress(address)
 
 	// 解析查询参数
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -205,25 +209,25 @@ func handleContractAddressTransfersImpl(w http.ResponseWriter, r *http.Request, 
 		role = "both" // 默认查询两种
 	}
 
-	// 构建查询
+	// 构建查询（使用LOWER()确保大小写不敏感的比较）
 	offset := (page - 1) * size
 	query := `SELECT e.tx_hash, e.block_number, e.block_time, e.from_address, e.to_address, 
 	          e.value, c.contract_symbol, c.decimals
 	          FROM events e
-	          LEFT JOIN contracts c ON e.contract_address = c.contract_address
-	          WHERE e.contract_address = ? AND e.event_name = 'Transfer'`
+	          LEFT JOIN contracts c ON LOWER(e.contract_address) = LOWER(c.contract_address)
+	          WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
 	args := []interface{}{contractAddress}
 
-	// 根据role参数添加地址筛选条件
+	// 根据role参数添加地址筛选条件（使用LOWER()确保大小写不敏感）
 	switch role {
 	case "from":
-		query += " AND e.from_address = ?"
+		query += " AND LOWER(e.from_address) = ?"
 		args = append(args, address)
 	case "to":
-		query += " AND e.to_address = ?"
+		query += " AND LOWER(e.to_address) = ?"
 		args = append(args, address)
 	case "both":
-		query += " AND (e.from_address = ? OR e.to_address = ?)"
+		query += " AND (LOWER(e.from_address) = ? OR LOWER(e.to_address) = ?)"
 		args = append(args, address, address)
 	}
 
@@ -281,14 +285,18 @@ func handleContractAddressTransactions(w http.ResponseWriter, r *http.Request, p
 	address := parts[2]
 
 	// 验证地址格式
-	if !strings.HasPrefix(contractAddress, "0x") || len(contractAddress) != 42 {
+	if !strings.HasPrefix(strings.ToLower(contractAddress), "0x") || len(contractAddress) != 42 {
 		writeError(w, http.StatusBadRequest, "Invalid contract address format")
 		return
 	}
-	if !strings.HasPrefix(address, "0x") || len(address) != 42 {
+	if !strings.HasPrefix(strings.ToLower(address), "0x") || len(address) != 42 {
 		writeError(w, http.StatusBadRequest, "Invalid address format")
 		return
 	}
+
+	// 规范化地址为小写
+	contractAddress = normalizeAddress(contractAddress)
+	address = normalizeAddress(address)
 
 	// 解析查询参数
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -309,25 +317,25 @@ func handleContractAddressTransactions(w http.ResponseWriter, r *http.Request, p
 	}
 	funcName := r.URL.Query().Get("func_name")
 
-	// 构建查询
+	// 构建查询（使用LOWER()确保大小写不敏感的比较）
 	offset := (page - 1) * size
 	query := `SELECT t.tx_hash, t.block_number, t.block_time, t.from_address, t.to_address,
 	          t.func_name, t.value, t.gas_used, t.status, c.contract_symbol, c.decimals
 	          FROM transactions t
-	          LEFT JOIN contracts c ON t.contract_address = c.contract_address
-	          WHERE t.contract_address = ?`
+	          LEFT JOIN contracts c ON LOWER(t.contract_address) = LOWER(c.contract_address)
+	          WHERE LOWER(t.contract_address) = ?`
 	args := []interface{}{contractAddress}
 
-	// 根据role参数添加地址筛选条件
+	// 根据role参数添加地址筛选条件（使用LOWER()确保大小写不敏感）
 	switch role {
 	case "from":
-		query += " AND t.from_address = ?"
+		query += " AND LOWER(t.from_address) = ?"
 		args = append(args, address)
 	case "to":
-		query += " AND t.to_address = ?"
+		query += " AND LOWER(t.to_address) = ?"
 		args = append(args, address)
 	case "both":
-		query += " AND (t.from_address = ? OR t.to_address = ?)"
+		query += " AND (LOWER(t.from_address) = ? OR LOWER(t.to_address) = ?)"
 		args = append(args, address, address)
 	}
 
@@ -404,10 +412,13 @@ func handleContractDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 验证地址格式（简单检查）
-	if !strings.HasPrefix(path, "0x") || len(path) != 42 {
+	if !strings.HasPrefix(strings.ToLower(path), "0x") || len(path) != 42 {
 		writeError(w, http.StatusBadRequest, "Invalid contract address format")
 		return
 	}
+
+	// 规范化地址为小写
+	path = normalizeAddress(path)
 
 	contract, err := db.GetContractByAddress(path)
 	if err != nil {
@@ -532,6 +543,9 @@ func handleTransfers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 规范化合约地址为小写
+	path = normalizeAddress(path)
+
 	// 解析查询参数
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
@@ -544,21 +558,29 @@ func handleTransfers(w http.ResponseWriter, r *http.Request) {
 	fromAddr := r.URL.Query().Get("from")
 	toAddr := r.URL.Query().Get("to")
 
-	// 构建查询
+	// 规范化地址参数为小写
+	if fromAddr != "" {
+		fromAddr = normalizeAddress(fromAddr)
+	}
+	if toAddr != "" {
+		toAddr = normalizeAddress(toAddr)
+	}
+
+	// 构建查询（使用LOWER()确保大小写不敏感的比较）
 	offset := (page - 1) * size
 	query := `SELECT e.tx_hash, e.block_number, e.block_time, e.from_address, e.to_address, 
 	          e.value, c.contract_symbol, c.decimals
 	          FROM events e
-	          LEFT JOIN contracts c ON e.contract_address = c.contract_address
-	          WHERE e.contract_address = ? AND e.event_name = 'Transfer'`
+	          LEFT JOIN contracts c ON LOWER(e.contract_address) = LOWER(c.contract_address)
+	          WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
 	args := []interface{}{path}
 
 	if fromAddr != "" {
-		query += " AND e.from_address = ?"
+		query += " AND LOWER(e.from_address) = ?"
 		args = append(args, fromAddr)
 	}
 	if toAddr != "" {
-		query += " AND e.to_address = ?"
+		query += " AND LOWER(e.to_address) = ?"
 		args = append(args, toAddr)
 	}
 
@@ -622,6 +644,9 @@ func handleTransactions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 规范化合约地址为小写
+	path = normalizeAddress(path)
+
 	// 解析查询参数
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
@@ -633,13 +658,13 @@ func handleTransactions(w http.ResponseWriter, r *http.Request) {
 	}
 	funcName := r.URL.Query().Get("func_name")
 
-	// 构建查询
+	// 构建查询（使用LOWER()确保大小写不敏感的比较）
 	offset := (page - 1) * size
 	query := `SELECT t.tx_hash, t.block_number, t.block_time, t.from_address, t.to_address,
 	          t.func_name, t.value, t.gas_used, t.status, c.contract_symbol, c.decimals
 	          FROM transactions t
-	          LEFT JOIN contracts c ON t.contract_address = c.contract_address
-	          WHERE t.contract_address = ?`
+	          LEFT JOIN contracts c ON LOWER(t.contract_address) = LOWER(c.contract_address)
+	          WHERE LOWER(t.contract_address) = ?`
 	args := []interface{}{path}
 
 	if funcName != "" {
@@ -711,6 +736,9 @@ func handleHolders(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Contract address is required")
 		return
 	}
+
+	// 规范化合约地址为小写
+	path = normalizeAddress(path)
 
 	// 解析查询参数
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -795,6 +823,19 @@ func writeError(w http.ResponseWriter, statusCode int, message string) {
 		Code:    statusCode,
 		Message: message,
 	})
+}
+
+// normalizeAddress 规范化地址，统一转换为小写
+// 以太坊地址是大小写不敏感的，统一转换为小写便于比较和查询
+func normalizeAddress(address string) string {
+	if address == "" {
+		return address
+	}
+	// 保持0x前缀，将后面的字符转换为小写
+	if strings.HasPrefix(address, "0x") || strings.HasPrefix(address, "0X") {
+		return "0x" + strings.ToLower(address[2:])
+	}
+	return strings.ToLower(address)
 }
 
 // formatTokenAmount 格式化代币金额

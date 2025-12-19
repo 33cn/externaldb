@@ -447,9 +447,9 @@ func (db *DB) SaveEvent(event *Event) error {
 	return err
 }
 
-// GetContractByAddress 根据地址获取合约信息
+// GetContractByAddress 根据地址获取合约信息（大小写不敏感）
 func (db *DB) GetContractByAddress(address string) (*Contract, error) {
-	query := `SELECT * FROM contracts WHERE contract_address = ?`
+	query := `SELECT * FROM contracts WHERE LOWER(contract_address) = LOWER(?)`
 
 	contract := &Contract{}
 	var totalSupplyStr sql.NullString
