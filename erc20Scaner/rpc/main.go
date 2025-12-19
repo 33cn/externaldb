@@ -117,8 +117,8 @@ func main() {
 	log.Printf("Database connected successfully")
 	log.Printf("Starting HTTP server on port %s", *port)
 
-	// 注册路由
-	http.HandleFunc("/api/contract/", handleContractDetail)
+	// 注册路由（注意：handleContractAddressTransactions 和 handleContractAddressTransfers 会先检查路径，如果不是匹配的格式会调用 handleContractDetail）
+	http.HandleFunc("/api/contract/", handleContractAddressTransfers)
 	http.HandleFunc("/api/contracts", handleContractList)
 	http.HandleFunc("/api/transfers/", handleTransfers)
 	http.HandleFunc("/api/transactions/", handleTransactions)
@@ -139,6 +139,252 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 		Code:    0,
 		Message: "OK",
 		Data:    map[string]string{"status": "healthy"},
+	})
+}
+
+// handleContractAddressTransfers 查询某个合约中指定地址的Transfer事件记录
+// GET /api/contract/{contractAddress}/address/{address}/transfers?page=1&size=20&role=from|to|both
+func handleContractAddressTransfers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// 解析路径：/api/contract/{contractAddress}/address/{address}/transfers 或 /transactions
+	path := strings.TrimPrefix(r.URL.Path, "/api/contract/")
+	parts := strings.Split(path, "/")
+
+	// 检查是否是 address 相关的路径
+	if len(parts) < 4 || parts[1] != "address" {
+		// 不是这个接口，可能是 handleContractDetail
+		handleContractDetail(w, r)
+		return
+	}
+
+	// 判断是 transfers 还是 transactions
+	if parts[3] == "transfers" {
+		handleContractAddressTransfersImpl(w, r, parts)
+	} else if parts[3] == "transactions" {
+		handleContractAddressTransactions(w, r, parts)
+	} else {
+		// 不是这个接口，可能是 handleContractDetail
+		handleContractDetail(w, r)
+	}
+}
+
+// handleContractAddressTransfersImpl 实现查询某个合约中指定地址的Transfer事件记录
+func handleContractAddressTransfersImpl(w http.ResponseWriter, r *http.Request, parts []string) {
+	contractAddress := parts[0]
+	address := parts[2]
+
+	// 验证地址格式
+	if !strings.HasPrefix(contractAddress, "0x") || len(contractAddress) != 42 {
+		writeError(w, http.StatusBadRequest, "Invalid contract address format")
+		return
+	}
+	if !strings.HasPrefix(address, "0x") || len(address) != 42 {
+		writeError(w, http.StatusBadRequest, "Invalid address format")
+		return
+	}
+
+	// 解析查询参数
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	if size < 1 || size > 100 {
+		size = 20
+	}
+	role := strings.ToLower(r.URL.Query().Get("role"))
+	if role != "from" && role != "to" && role != "" {
+		writeError(w, http.StatusBadRequest, "Invalid role parameter, must be 'from', 'to', or empty (both)")
+		return
+	}
+	if role == "" {
+		role = "both" // 默认查询两种
+	}
+
+	// 构建查询
+	offset := (page - 1) * size
+	query := `SELECT e.tx_hash, e.block_number, e.block_time, e.from_address, e.to_address, 
+	          e.value, c.contract_symbol, c.decimals
+	          FROM events e
+	          LEFT JOIN contracts c ON e.contract_address = c.contract_address
+	          WHERE e.contract_address = ? AND e.event_name = 'Transfer'`
+	args := []interface{}{contractAddress}
+
+	// 根据role参数添加地址筛选条件
+	switch role {
+	case "from":
+		query += " AND e.from_address = ?"
+		args = append(args, address)
+	case "to":
+		query += " AND e.to_address = ?"
+		args = append(args, address)
+	case "both":
+		query += " AND (e.from_address = ? OR e.to_address = ?)"
+		args = append(args, address, address)
+	}
+
+	query += " ORDER BY e.block_number DESC, e.log_index DESC LIMIT ? OFFSET ?"
+	args = append(args, size, offset)
+
+	rows, err := db.GetConn().Query(query, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Database error: %v", err))
+		return
+	}
+	defer rows.Close()
+
+	var transfers []TransferRecord
+	for rows.Next() {
+		var record TransferRecord
+		var valueStr string
+		err := rows.Scan(
+			&record.TxHash,
+			&record.BlockNumber,
+			&record.BlockTime,
+			&record.From,
+			&record.To,
+			&valueStr,
+			&record.TokenSymbol,
+			&record.TokenDecimals,
+		)
+		if err != nil {
+			continue
+		}
+
+		value, _ := new(big.Int).SetString(valueStr, 10)
+		record.Value = valueStr
+		record.ValueFormatted = formatTokenAmount(value, record.TokenDecimals)
+
+		transfers = append(transfers, record)
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Code:    0,
+		Message: "Success",
+		Data: map[string]interface{}{
+			"transfers": transfers,
+			"page":      page,
+			"size":      size,
+		},
+	})
+}
+
+// handleContractAddressTransactions 查询某个合约中指定地址的相关交易
+// GET /api/contract/{contractAddress}/address/{address}/transactions?page=1&size=20&role=from|to|both&func_name=transfer
+func handleContractAddressTransactions(w http.ResponseWriter, r *http.Request, parts []string) {
+
+	contractAddress := parts[0]
+	address := parts[2]
+
+	// 验证地址格式
+	if !strings.HasPrefix(contractAddress, "0x") || len(contractAddress) != 42 {
+		writeError(w, http.StatusBadRequest, "Invalid contract address format")
+		return
+	}
+	if !strings.HasPrefix(address, "0x") || len(address) != 42 {
+		writeError(w, http.StatusBadRequest, "Invalid address format")
+		return
+	}
+
+	// 解析查询参数
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	if size < 1 || size > 100 {
+		size = 20
+	}
+	role := strings.ToLower(r.URL.Query().Get("role"))
+	if role != "from" && role != "to" && role != "" {
+		writeError(w, http.StatusBadRequest, "Invalid role parameter, must be 'from', 'to', or empty (both)")
+		return
+	}
+	if role == "" {
+		role = "both" // 默认查询两种
+	}
+	funcName := r.URL.Query().Get("func_name")
+
+	// 构建查询
+	offset := (page - 1) * size
+	query := `SELECT t.tx_hash, t.block_number, t.block_time, t.from_address, t.to_address,
+	          t.func_name, t.value, t.gas_used, t.status, c.contract_symbol, c.decimals
+	          FROM transactions t
+	          LEFT JOIN contracts c ON t.contract_address = c.contract_address
+	          WHERE t.contract_address = ?`
+	args := []interface{}{contractAddress}
+
+	// 根据role参数添加地址筛选条件
+	switch role {
+	case "from":
+		query += " AND t.from_address = ?"
+		args = append(args, address)
+	case "to":
+		query += " AND t.to_address = ?"
+		args = append(args, address)
+	case "both":
+		query += " AND (t.from_address = ? OR t.to_address = ?)"
+		args = append(args, address, address)
+	}
+
+	// 函数名称筛选
+	if funcName != "" {
+		query += " AND t.func_name = ?"
+		args = append(args, funcName)
+	}
+
+	query += " ORDER BY t.block_number DESC LIMIT ? OFFSET ?"
+	args = append(args, size, offset)
+
+	rows, err := db.GetConn().Query(query, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Database error: %v", err))
+		return
+	}
+	defer rows.Close()
+
+	var transactions []TransactionRecord
+	for rows.Next() {
+		var record TransactionRecord
+		var valueStr *string
+		err := rows.Scan(
+			&record.TxHash,
+			&record.BlockNumber,
+			&record.BlockTime,
+			&record.From,
+			&record.To,
+			&record.FuncName,
+			&valueStr,
+			&record.GasUsed,
+			&record.Status,
+			&record.TokenSymbol,
+			&record.TokenDecimals,
+		)
+		if err != nil {
+			continue
+		}
+
+		if valueStr != nil {
+			value, _ := new(big.Int).SetString(*valueStr, 10)
+			record.Value = *valueStr
+			record.ValueFormatted = formatTokenAmount(value, record.TokenDecimals)
+		}
+
+		transactions = append(transactions, record)
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Code:    0,
+		Message: "Success",
+		Data: map[string]interface{}{
+			"transactions": transactions,
+			"page":         page,
+			"size":         size,
+		},
 	})
 }
 

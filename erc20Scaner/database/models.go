@@ -452,6 +452,7 @@ func (db *DB) GetContractByAddress(address string) (*Contract, error) {
 	query := `SELECT * FROM contracts WHERE contract_address = ?`
 
 	contract := &Contract{}
+	var totalSupplyStr sql.NullString
 	err := db.conn.QueryRow(query, address).Scan(
 		&contract.ID,
 		&contract.ContractAddress,
@@ -459,7 +460,7 @@ func (db *DB) GetContractByAddress(address string) (*Contract, error) {
 		&contract.ContractSymbol,
 		&contract.ContractType,
 		&contract.Decimals,
-		&contract.TotalSupply,
+		&totalSupplyStr,
 		&contract.DeployTxHash,
 		&contract.DeployBlockNumber,
 		&contract.DeployBlockTime,
@@ -472,6 +473,16 @@ func (db *DB) GetContractByAddress(address string) (*Contract, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// 将字符串转换为 big.Int
+	if totalSupplyStr.Valid && totalSupplyStr.String != "" {
+		totalSupply, ok := new(big.Int).SetString(totalSupplyStr.String, 10)
+		if !ok {
+			return nil, fmt.Errorf("failed to parse total_supply: %s", totalSupplyStr.String)
+		}
+		contract.TotalSupply = totalSupply
+	}
+
 	return contract, nil
 }
 
@@ -488,12 +499,14 @@ func (db *DB) GetTokenBalancesByAddress(address string) ([]TokenBalance, error) 
 	var balances []TokenBalance
 	for rows.Next() {
 		var balance TokenBalance
+		var balanceStr sql.NullString
+		var balanceFormattedStr sql.NullString
 		err := rows.Scan(
 			&balance.ID,
 			&balance.Address,
 			&balance.ContractAddress,
-			&balance.Balance,
-			&balance.BalanceFormatted,
+			&balanceStr,
+			&balanceFormattedStr,
 			&balance.LastTxHash,
 			&balance.LastTxBlockNumber,
 			&balance.LastUpdatedAt,
@@ -502,6 +515,23 @@ func (db *DB) GetTokenBalancesByAddress(address string) ([]TokenBalance, error) 
 		if err != nil {
 			return nil, err
 		}
+
+		// 将字符串转换为 big.Int
+		if balanceStr.Valid && balanceStr.String != "" {
+			balanceValue, ok := new(big.Int).SetString(balanceStr.String, 10)
+			if ok {
+				balance.Balance = balanceValue
+			}
+		}
+
+		// 将字符串转换为 big.Float
+		if balanceFormattedStr.Valid && balanceFormattedStr.String != "" {
+			balanceFormattedValue, _, err := new(big.Float).Parse(balanceFormattedStr.String, 10)
+			if err == nil {
+				balance.BalanceFormatted = balanceFormattedValue
+			}
+		}
+
 		balances = append(balances, balance)
 	}
 
@@ -524,6 +554,9 @@ func (db *DB) GetEventsByContract(contractAddress string, limit int) ([]Event, e
 	var events []Event
 	for rows.Next() {
 		var event Event
+		var valueStr sql.NullString
+		var valueFormattedStr sql.NullString
+		var amountStr sql.NullString
 		err := rows.Scan(
 			&event.ID,
 			&event.TxHash,
@@ -535,11 +568,11 @@ func (db *DB) GetEventsByContract(contractAddress string, limit int) ([]Event, e
 			&event.EventSignature,
 			&event.FromAddress,
 			&event.ToAddress,
-			&event.Value,
-			&event.ValueFormatted,
+			&valueStr,
+			&valueFormattedStr,
 			&event.OwnerAddress,
 			&event.SpenderAddress,
-			&event.Amount,
+			&amountStr,
 			&event.Topic0,
 			&event.Topic1,
 			&event.Topic2,
@@ -550,6 +583,31 @@ func (db *DB) GetEventsByContract(contractAddress string, limit int) ([]Event, e
 		if err != nil {
 			return nil, err
 		}
+
+		// 将字符串转换为 big.Int (value)
+		if valueStr.Valid && valueStr.String != "" {
+			value, ok := new(big.Int).SetString(valueStr.String, 10)
+			if ok {
+				event.Value = value
+			}
+		}
+
+		// 将字符串转换为 big.Float (value_formatted)
+		if valueFormattedStr.Valid && valueFormattedStr.String != "" {
+			valueFormatted, _, err := new(big.Float).Parse(valueFormattedStr.String, 10)
+			if err == nil {
+				event.ValueFormatted = valueFormatted
+			}
+		}
+
+		// 将字符串转换为 big.Int (amount)
+		if amountStr.Valid && amountStr.String != "" {
+			amount, ok := new(big.Int).SetString(amountStr.String, 10)
+			if ok {
+				event.Amount = amount
+			}
+		}
+
 		events = append(events, event)
 	}
 
