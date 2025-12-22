@@ -1,8 +1,8 @@
 module github.com/33cn/externaldb/erc20Scaner
 
-go 1.21.0
+go 1.22.3
 
-toolchain go1.21.3
+toolchain go1.24.7
 
 require (
 	github.com/33cn/externaldb v1.6.3
@@ -19,6 +19,7 @@ require (
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
+	github.com/clinmanc/slogrotate v0.1.0 // indirect
 	github.com/decred/base58 v1.0.3 // indirect
 	github.com/decred/dcrd/crypto/blake256 v1.0.0 // indirect
 	github.com/dgraph-io/badger v1.6.2 // indirect
@@ -46,7 +47,7 @@ require (
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
 	google.golang.org/grpc v1.40.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
-	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
 	k8s.io/apimachinery v0.17.5 // indirect
 )

@@ -3,11 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/33cn/externaldb/erc20Scaner/config"
 	"github.com/33cn/externaldb/escli"
+
+	"log/slog"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
@@ -29,17 +32,53 @@ var (
 	//
 )
 
+var log *slog.Logger
+
 func main() {
 	flag.Parse()
 
 	// 加载配置文件
 	cfg, err := config.LoadConfig(*configFile)
 	if err != nil {
-		log.Printf("Warning: Failed to load config file %s: %v, using defaults", *configFile, err)
+		// 先使用标准log输出，因为log15还未初始化
+		fmt.Printf("Warning: Failed to load config file %s: %v, using defaults\n", *configFile, err)
 		cfg = config.GetDefaultConfig()
 	} else {
-		log.Printf("Config loaded from %s", *configFile)
+		fmt.Printf("Config loaded from %s\n", *configFile)
 	}
+
+	// 初始化日志系统
+	logLevel := slog.LevelDebug
+	if cfg.Log.Level != "" {
+		if cfg.Log.Level == "debug" {
+			logLevel = slog.LevelDebug
+		} else if cfg.Log.Level == "info" {
+			logLevel = slog.LevelInfo
+		} else if cfg.Log.Level == "warn" {
+			logLevel = slog.LevelWarn
+		} else if cfg.Log.Level == "error" {
+			logLevel = slog.LevelError
+		}
+	}
+
+	rotateWriter := lumberjack.Logger{
+
+		// 指定日志文件前缀和路径。备份文件将保留在同一目录。
+		// 例如：./logs/app.log, ./logs/app-2025-12-22T08-30-00.log.gz
+		Filename:   "./logs/app.log", // 日志文件的基础名，即前缀
+		MaxSize:    100,              // 单位：MB。日志文件达到此大小后轮转
+		MaxBackups: 5,                // 保留旧日志文件的最大数量
+		MaxAge:     30,               // 单位：天。根据文件名中的时间戳删除旧文件
+		Compress:   true,             // 是否压缩轮转后的旧日志文件
+		// 更多可选配置...
+	}
+	defer rotateWriter.Close()
+	handler := slog.NewJSONHandler(&rotateWriter, &slog.HandlerOptions{
+		Level: logLevel,
+	})
+
+	log = slog.New(handler)
+	// 记得在应用退出前关闭处理器，确保日志写入完成
 
 	// 合并命令行参数（命令行参数优先级更高）
 	// 使用flag.Visit检查参数是否被显式设置
@@ -90,29 +129,24 @@ func main() {
 	cfg.MergeWithFlags(nodeURL, startBlock, endBlock, dbEnabled, dbDSNStr,
 		esEnabledFlag, esHostFlag, esPrefixFlag, esVersionFlag, esUserFlag, esPasswordFlag)
 
-	// 打印最终配置
-	fmt.Println("=== Configuration ===")
-	fmt.Printf("Node URL: %s\n", cfg.Node.URL)
-	fmt.Printf("Start Block: %d\n", cfg.Scanner.StartBlock)
-	if cfg.Scanner.EndBlock > 0 {
-		fmt.Printf("End Block: %d\n", cfg.Scanner.EndBlock)
-	} else {
-		fmt.Printf("End Block: unlimited\n")
-	}
-	fmt.Printf("Database Enabled: %v\n", cfg.Database.Enabled)
+	// 打印最终配置（使用结构化日志）
+	log.Info("=== Configuration ===",
+		"nodeURL", cfg.Node.URL,
+		"startBlock", cfg.Scanner.StartBlock,
+		"endBlock", cfg.Scanner.EndBlock,
+		"dbEnabled", cfg.Database.Enabled,
+		"esEnabled", cfg.ES.Enabled)
+
 	if cfg.Database.Enabled {
-		fmt.Printf("Database DSN: %s\n", maskDSN(cfg.Database.DSN))
+		log.Info("Database configuration", "dsn", maskDSN(cfg.Database.DSN))
 	}
-	fmt.Printf("ES Enabled: %v\n", cfg.ES.Enabled)
 	if cfg.ES.Enabled {
-		fmt.Printf("ES Host: %s\n", cfg.ES.Host)
-		fmt.Printf("ES Prefix: %s\n", cfg.ES.Prefix)
-		fmt.Printf("ES Version: %d\n", cfg.ES.Version)
-		if cfg.ES.User != "" {
-			fmt.Printf("ES User: %s\n", cfg.ES.User)
-		}
+		log.Info("ES configuration",
+			"host", cfg.ES.Host,
+			"prefix", cfg.ES.Prefix,
+			"version", cfg.ES.Version,
+			"user", cfg.ES.User)
 	}
-	fmt.Println("===================")
 
 	// 初始化并启动
 	p := new(Process)
@@ -124,18 +158,19 @@ func main() {
 
 	// 如果启用了ES模式，优先使用ES读取区块
 	if cfg.ES.Enabled {
-		log.Printf("ES mode enabled, reading blocks from ES: %s (prefix: %s)", cfg.ES.Host, cfg.ES.Prefix)
+		log.Info("ES mode enabled", "host", cfg.ES.Host, "prefix", cfg.ES.Prefix)
 		esClient, err := escli.NewESLongConnect(cfg.ES.Host, cfg.ES.Prefix, cfg.ES.Version, cfg.ES.User, cfg.ES.Password)
 		if err != nil {
-			log.Fatalf("Failed to connect to ES: %v", err)
+			log.Error("Failed to connect to ES", "err", err, "host", cfg.ES.Host)
+			return
 		}
-		log.Printf("ES connection established successfully")
+		log.Info("ES connection established successfully")
 		p.Init()
 		defer p.Close()
 		p.StartWithEsClient(esClient)
 	} else {
 		// 使用节点模式
-		log.Printf("Node mode enabled, reading blocks from node: %s", cfg.Node.URL)
+		log.Info("Node mode enabled", "url", cfg.Node.URL)
 		p.Init()
 		defer p.Close()
 		p.Start()
