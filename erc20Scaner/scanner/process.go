@@ -230,7 +230,8 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 		return fmt.Errorf("decode BlockDetail failed: %w", err)
 	}
 
-	fmt.Printf("Processing block from ES: height=%d, seq=%d, txCount=%d\n",
+	fmt.Printf("Processing block from ES: seq=%d, type=%d, height=%d, seq=%d, txCount=%d\n",
+		blockSeq.SyncSeq, blockSeq.Type,
 		detail.Block.Height, blockSeq.SyncSeq, len(detail.Block.Txs))
 
 	// 遍历交易，查找evm交易
@@ -256,7 +257,14 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 	}
 	txs := block.Transactions()
 
-	fmt.Println("startPoint:", p.startPoint, "txsnum:", len(txs))
+	// check block hash
+	// 回滚时会对不上
+	if blockSeq.Hash != block.Hash().Hex() {
+		fmt.Printf("block hash mismatch: %s != %s, will rollback\n", blockSeq.Hash, block.Hash().Hex())
+		return nil // 跳过不处理
+	}
+
+	fmt.Println("startPoint:", p.startPoint, "height", detail.Block.Height, "txsnum:", len(txs))
 	for _, idx := range evmtxs {
 		err := p.processTransactionWithReceipt(txs[idx], block)
 		if err != nil {
