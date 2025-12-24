@@ -137,6 +137,9 @@ func main() {
 		"dbEnabled", cfg.Database.Enabled,
 		"esEnabled", cfg.ES.Enabled)
 
+	log.Debug("=== Configuration Debug ===",
+		"nodeURL", cfg.Node.URL)
+
 	if cfg.Database.Enabled {
 		log.Info("Database configuration", "dsn", maskDSN(cfg.Database.DSN))
 	}

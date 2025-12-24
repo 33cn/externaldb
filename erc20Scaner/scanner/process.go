@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	"strings"
@@ -259,13 +260,22 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 	}
 	txs := block.Transactions()
 
-	// check block hash
+	// check block txs length
 	// 回滚时会对不上
-	if blockSeq.Hash != block.Hash().Hex() {
-		log.Warn("Block hash mismatch, skipping",
+	if len(detail.Block.Txs) != block.Transactions().Len() {
+		log.Warn("Block txs length mismatch, skipping",
 			"seqHash", blockSeq.Hash,
 			"blockHash", block.Hash().Hex(),
-			"height", detail.Block.Height)
+			"height", detail.Block.Height,
+			"txCount", len(detail.Block.Txs),
+			"blockTxCount", block.Transactions().Len(),
+		)
+		for index, tx := range detail.Block.Txs {
+			log.Debug("Block tx", "tx", hexutil.Encode(tx.Hash()), "txIndex", index)
+		}
+		for index, tx := range block.Transactions() {
+			log.Debug("Block tx", "tx", tx.Hash().Hex(), "txIndex", index)
+		}
 		return nil // 跳过不处理
 	}
 
