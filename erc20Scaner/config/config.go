@@ -58,8 +58,11 @@ type ESConfig struct {
 
 // LogConfig 日志配置
 type LogConfig struct {
-	Level string `yaml:"level"`
-	File  string `yaml:"file"`
+	Level      string `yaml:"level"`       // 日志级别: debug, info, warn, error
+	File       string `yaml:"file"`        // 日志文件路径
+	MaxSize    int    `yaml:"max_size"`    // 单个日志文件最大大小（MB），默认 100
+	MaxBackups int    `yaml:"max_backups"` // 保留旧日志文件的最大数量，默认 5
+	MaxAge     int    `yaml:"max_age"`     // 日志文件保留天数，默认 30
 }
 
 // LoadConfig 加载配置文件
@@ -110,8 +113,11 @@ func GetDefaultConfig() *Config {
 			Password: "",
 		},
 		Log: LogConfig{
-			Level: "info",
-			File:  "./logs/app.log",
+			Level:      "info",
+			File:       "./logs/app.log",
+			MaxSize:    100,
+			MaxBackups: 5,
+			MaxAge:     30,
 		},
 	}
 }

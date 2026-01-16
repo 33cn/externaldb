@@ -3,14 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"strings"
 
 	"github.com/33cn/externaldb/erc20Scaner/config"
+	"github.com/33cn/externaldb/erc20Scaner/logger"
 	"github.com/33cn/externaldb/escli"
 
 	"log/slog"
-
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var log *slog.Logger
@@ -28,8 +26,12 @@ func main() {
 		return
 	}
 
-	// 初始化日志
-	log = initLogger(cfg)
+	// 初始化日志（如果失败则退出程序）
+	log, err = logger.InitLogger(cfg.Log)
+	if err != nil {
+		fmt.Printf("Failed to initialize logger: %v\n", err)
+		return
+	}
 
 	// 打印配置信息
 	logConfig(cfg, log)
@@ -67,34 +69,6 @@ func initAndStart(cfg *config.Config) {
 	}
 }
 
-func initLogger(cfg *config.Config) *slog.Logger {
-	logLevel := slog.LevelDebug
-	switch cfg.Log.Level {
-	case "debug":
-		logLevel = slog.LevelDebug
-	case "info":
-		logLevel = slog.LevelInfo
-	case "warn":
-		logLevel = slog.LevelWarn
-	case "error":
-		logLevel = slog.LevelError
-	}
-
-	rotateWriter := lumberjack.Logger{
-		Filename:   "./logs/app.log",
-		MaxSize:    100,
-		MaxBackups: 5,
-		MaxAge:     30,
-		Compress:   true,
-	}
-	defer rotateWriter.Close()
-
-	handler := slog.NewJSONHandler(&rotateWriter, &slog.HandlerOptions{
-		Level: logLevel,
-	})
-	return slog.New(handler)
-}
-
 func logConfig(cfg *config.Config, log *slog.Logger) {
 	log.Info("=== Configuration ===",
 		"nodeURL", cfg.Node.URL,
@@ -104,7 +78,7 @@ func logConfig(cfg *config.Config, log *slog.Logger) {
 		"esEnabled", cfg.ES.Enabled)
 
 	if cfg.Database.Enabled {
-		log.Info("Database configuration", "dsn", maskDSN(cfg.Database.DSN))
+		log.Info("Database configuration", "dsn", logger.MaskDSN(cfg.Database.DSN))
 	}
 	if cfg.ES.Enabled {
 		log.Info("ES configuration",
@@ -113,17 +87,4 @@ func logConfig(cfg *config.Config, log *slog.Logger) {
 			"version", cfg.ES.Version,
 			"user", cfg.ES.User)
 	}
-}
-
-// maskDSN 隐藏DSN中的密码
-func maskDSN(dsn string) string {
-	// 简单的密码隐藏：user:password@ -> user:***@
-	parts := strings.Split(dsn, "@")
-	if len(parts) > 0 {
-		userPass := strings.Split(parts[0], ":")
-		if len(userPass) == 2 {
-			return userPass[0] + ":***@" + strings.Join(parts[1:], "@")
-		}
-	}
-	return dsn
 }

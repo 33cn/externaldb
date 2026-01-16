@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -13,7 +14,10 @@ import (
 
 	"github.com/33cn/externaldb/erc20Scaner/config"
 	"github.com/33cn/externaldb/erc20Scaner/database"
+	"github.com/33cn/externaldb/erc20Scaner/logger"
 )
+
+var slogger *slog.Logger
 
 var (
 	// 全局配置变量，供 tx_parse.go 使用
@@ -113,6 +117,12 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// 初始化结构化日志（如果失败则退出程序）
+	slogger, err = logger.InitLogger(cfg.Log)
+	if err != nil {
+		log.Fatalf("Failed to initialize logger: %v", err)
+	}
+
 	// 获取最终配置值（flag 优先，否则使用配置文件）
 	flagInfo := config.DetectFlagSet()
 	dsn := config.GetFinalValue(flags.DBDSN, flagInfo.DBDSN, cfg.Database.DSN, "root:password@tcp(localhost:3306)/token_scanner?charset=utf8mb4&parseTime=True&loc=Local")
@@ -130,12 +140,13 @@ func main() {
 	// 连接数据库
 	db, err = database.NewDB(dsn)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		slogger.Error("Failed to connect to database", "err", err, "dsn", logger.MaskDSN(dsn))
+		return
 	}
 	defer db.Close()
 
-	log.Printf("Database connected successfully")
-	log.Printf("Starting HTTP server on port %s", port)
+	slogger.Info("Database connected successfully")
+	slogger.Info("Starting HTTP server", "port", port)
 
 	// 注册路由（注意：handleContractAddressTransactions 和 handleContractAddressTransfers 会先检查路径，如果不是匹配的格式会调用 handleContractDetail）
 	http.HandleFunc("/api/contract/", handleContractAddressTransfers)
@@ -150,8 +161,9 @@ func main() {
 
 	// 启动服务器
 	addr := fmt.Sprintf(":%s", port)
-	log.Printf("Server listening on http://localhost%s", addr)
+	slogger.Info("Server listening", "addr", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {
+		slogger.Error("Failed to start server", "err", err)
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
