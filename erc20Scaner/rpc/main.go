@@ -68,15 +68,12 @@ func main() {
 	slogger.Info("Database connected successfully")
 	slogger.Info("Starting HTTP server", "port", port)
 
-	// 注册路由（注意：handleContractAddressTransactions 和 handleContractAddressTransfers 会先检查路径，如果不是匹配的格式会调用 handleContractDetail）
-	http.HandleFunc("/api/contract/", handleContractAddressTransfers)
-	http.HandleFunc("/api/contracts", handleContractList)
-	http.HandleFunc("/api/token/", handleTokenDetail)
-	http.HandleFunc("/api/tokens", handleTokenList)
-	http.HandleFunc("/api/transfers/", handleTransfers)
-	http.HandleFunc("/api/transactions/", handleTransactions)
-	http.HandleFunc("/api/holders/", handleHolders)
-	http.HandleFunc("/api/parse_tx", handleParseTx)
+	// 注册路由
+	http.HandleFunc("/api/contracts", handleContractsRouter)
+	http.HandleFunc("/api/contracts/", handleContractsRouter)
+	http.HandleFunc("/api/tokens", handleTokensRouter)
+	http.HandleFunc("/api/tokens/", handleTokensRouter)
+	http.HandleFunc("/api/transactions/", handleTransactionsRouter)
 	http.HandleFunc("/health", handleHealth)
 
 	// 启动服务器

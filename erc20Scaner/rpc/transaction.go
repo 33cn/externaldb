@@ -2,102 +2,67 @@ package main
 
 import (
 	"fmt"
-	"math/big"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
-// handleTransactions 查询指定合约的交易记录
-// GET /api/transactions/{address}?page=1&size=20&func_name=transfer
-func handleTransactions(w http.ResponseWriter, r *http.Request) {
+// handleTransactionsRouter 路由分发函数，处理 /api/transactions 路径
+func handleTransactionsRouter(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
-	path := strings.TrimPrefix(r.URL.Path, "/api/transactions/")
+	// 移除前缀 /api/transactions
+	path := strings.TrimPrefix(r.URL.Path, "/api/transactions")
+
+	// 移除开头的 /
+	path = strings.TrimPrefix(path, "/")
 	if path == "" {
-		writeError(w, http.StatusBadRequest, "Contract address is required")
+		writeError(w, http.StatusBadRequest, "Transaction hash is required")
 		return
 	}
 
-	// 规范化合约地址为小写
-	path = normalizeAddress(path)
+	parts := strings.Split(path, "/")
 
-	// 解析查询参数
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 {
-		page = 1
-	}
-	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
-	if size < 1 || size > 100 {
-		size = 20
-	}
-	funcName := r.URL.Query().Get("func_name")
-
-	// 构建查询（使用LOWER()确保大小写不敏感的比较）
-	offset := (page - 1) * size
-	query := `SELECT t.tx_hash, t.block_number, t.block_time, t.from_address, t.to_address,
-	          t.func_name, t.value, t.gas_used, t.status, c.contract_symbol, c.decimals
-	          FROM transactions t
-	          LEFT JOIN contracts c ON LOWER(t.contract_address) = LOWER(c.contract_address)
-	          WHERE LOWER(t.contract_address) = ?`
-	args := []interface{}{path}
-
-	if funcName != "" {
-		query += " AND t.func_name = ?"
-		args = append(args, funcName)
+	// /api/transactions/{tx_hash}/analysis
+	if len(parts) == 2 && parts[1] == "analysis" {
+		handleTransactionAnalysis(w, r, parts[0])
+		return
 	}
 
-	query += " ORDER BY t.block_number DESC LIMIT ? OFFSET ?"
-	args = append(args, size, offset)
+	// /api/transactions/{tx_hash} - 如果需要查询交易详情，可以在这里实现
+	if len(parts) == 1 {
+		// 目前暂不实现，返回提示
+		writeError(w, http.StatusNotImplemented, "Transaction detail query is not implemented yet")
+		return
+	}
 
-	rows, err := db.GetConn().Query(query, args...)
+	writeError(w, http.StatusNotFound, "Invalid path")
+}
+
+// handleTransactionAnalysis 解析并获取单笔 EVM 交易的详细动作
+// GET /api/transactions/{tx_hash}/analysis
+func handleTransactionAnalysis(w http.ResponseWriter, r *http.Request, txHash string) {
+	// 验证交易哈希格式
+	if !strings.HasPrefix(strings.ToLower(txHash), "0x") || len(txHash) != 66 {
+		writeError(w, http.StatusBadRequest, "Invalid tx_hash format")
+		return
+	}
+
+	// 从Chain33节点获取交易详情
+	detail, err := getTxDetailFromChain33(globalChainGRPC, txHash)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Database error: %v", err))
+		writeError(w, http.StatusNotFound, fmt.Sprintf("Transaction not found: %v", err))
 		return
 	}
-	defer rows.Close()
 
-	var transactions []TransactionRecord
-	for rows.Next() {
-		var record TransactionRecord
-		var valueStr *string
-		err := rows.Scan(
-			&record.TxHash,
-			&record.BlockNumber,
-			&record.BlockTime,
-			&record.From,
-			&record.To,
-			&record.FuncName,
-			&valueStr,
-			&record.GasUsed,
-			&record.Status,
-			&record.TokenSymbol,
-			&record.TokenDecimals,
-		)
-		if err != nil {
-			continue
-		}
-
-		if valueStr != nil {
-			value, _ := new(big.Int).SetString(*valueStr, 10)
-			record.Value = *valueStr
-			record.ValueFormatted = formatTokenAmount(value, record.TokenDecimals)
-		}
-
-		transactions = append(transactions, record)
-	}
+	// 解析EVM交易
+	parsed := parseEvmTx(detail, getAbiFromES, globalChainSymbol)
 
 	writeJSON(w, http.StatusOK, APIResponse{
 		Code:    0,
 		Message: "Success",
-		Data: map[string]interface{}{
-			"transactions": transactions,
-			"page":         page,
-			"size":         size,
-		},
+		Data:    parsed,
 	})
 }
-

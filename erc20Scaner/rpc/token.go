@@ -8,75 +8,38 @@ import (
 	"strings"
 )
 
-// handleTokenDetail 查询指定ERC20代币的详细信息
-// GET /api/token/{address}
-func handleTokenDetail(w http.ResponseWriter, r *http.Request) {
+// handleTokensRouter 路由分发函数，处理 /api/tokens 路径
+func handleTokensRouter(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
-	// 从URL路径提取代币地址
-	path := strings.TrimPrefix(r.URL.Path, "/api/token/")
-	if path == "" {
-		writeError(w, http.StatusBadRequest, "Token address is required")
+	// 移除前缀 /api/tokens
+	path := strings.TrimPrefix(r.URL.Path, "/api/tokens")
+
+	// 如果路径为空或只有 /，则是列表接口
+	if path == "" || path == "/" {
+		handleTokenList(w, r)
 		return
 	}
 
-	// 验证地址格式（简单检查）
-	if !strings.HasPrefix(strings.ToLower(path), "0x") || len(path) != 42 {
-		writeError(w, http.StatusBadRequest, "Invalid token address format")
+	// 移除开头的 /
+	path = strings.TrimPrefix(path, "/")
+	parts := strings.Split(path, "/")
+
+	// /api/tokens/{address}
+	if len(parts) == 1 {
+		handleTokenDetail(w, r, parts[0])
 		return
 	}
 
-	// 规范化地址为小写
-	path = normalizeAddress(path)
-
-	contract, err := db.GetContractByAddress(path)
-	if err != nil {
-		writeError(w, http.StatusNotFound, fmt.Sprintf("Token not found: %v", err))
-		return
-	}
-
-	// 检查是否是ERC20代币
-	if contract.ContractType != "ERC20" {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("Address is not an ERC20 token, contract type: %s", contract.ContractType))
-		return
-	}
-
-	// 格式化总供应量
-	totalSupplyFormatted := formatTokenAmount(contract.TotalSupply, contract.Decimals)
-
-	detail := ContractDetail{
-		Address:              contract.ContractAddress,
-		Name:                 contract.ContractName,
-		Symbol:               contract.ContractSymbol,
-		Type:                 contract.ContractType,
-		Decimals:             contract.Decimals,
-		TotalSupply:          contract.TotalSupply.String(),
-		TotalSupplyFormatted: totalSupplyFormatted,
-		DeployTxHash:         contract.DeployTxHash,
-		DeployBlockNumber:    contract.DeployBlockNumber,
-		DeployTime:           contract.DeployBlockTime,
-		Deployer:             contract.DeployerAddress,
-		VerificationStatus:   contract.VerificationStatus,
-	}
-
-	writeJSON(w, http.StatusOK, APIResponse{
-		Code:    0,
-		Message: "Success",
-		Data:    detail,
-	})
+	writeError(w, http.StatusNotFound, "Invalid path")
 }
 
 // handleTokenList 查询ERC20 token列表
 // GET /api/tokens?page=1&size=20&symbol=USDT&name=Token
 func handleTokenList(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
-		return
-	}
-
 	// 解析查询参数
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
@@ -170,3 +133,51 @@ func handleTokenList(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleTokenDetail 查询指定ERC20代币的详细信息
+// GET /api/tokens/{address}
+func handleTokenDetail(w http.ResponseWriter, r *http.Request, address string) {
+	// 验证地址格式
+	if !strings.HasPrefix(strings.ToLower(address), "0x") || len(address) != 42 {
+		writeError(w, http.StatusBadRequest, "Invalid token address format")
+		return
+	}
+
+	// 规范化地址为小写
+	address = normalizeAddress(address)
+
+	contract, err := db.GetContractByAddress(address)
+	if err != nil {
+		writeError(w, http.StatusNotFound, fmt.Sprintf("Token not found: %v", err))
+		return
+	}
+
+	// 检查是否是ERC20代币
+	if contract.ContractType != "ERC20" {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("Address is not an ERC20 token, contract type: %s", contract.ContractType))
+		return
+	}
+
+	// 格式化总供应量
+	totalSupplyFormatted := formatTokenAmount(contract.TotalSupply, contract.Decimals)
+
+	detail := ContractDetail{
+		Address:              contract.ContractAddress,
+		Name:                 contract.ContractName,
+		Symbol:               contract.ContractSymbol,
+		Type:                 contract.ContractType,
+		Decimals:             contract.Decimals,
+		TotalSupply:          contract.TotalSupply.String(),
+		TotalSupplyFormatted: totalSupplyFormatted,
+		DeployTxHash:         contract.DeployTxHash,
+		DeployBlockNumber:    contract.DeployBlockNumber,
+		DeployTime:           contract.DeployBlockTime,
+		Deployer:             contract.DeployerAddress,
+		VerificationStatus:   contract.VerificationStatus,
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Code:    0,
+		Message: "Success",
+		Data:    detail,
+	})
+}
