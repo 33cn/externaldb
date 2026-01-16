@@ -44,19 +44,18 @@ func main() {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}
 
-	// 获取最终配置值（flag 优先，否则使用配置文件）
-	flagInfo := config.DetectFlagSet()
-	dsn := config.GetFinalValue(flags.DBDSN, flagInfo.DBDSN, cfg.Database.DSN, "root:password@tcp(localhost:3306)/token_scanner?charset=utf8mb4&parseTime=True&loc=Local")
-	port := config.GetFinalValue(flags.Port, flagInfo.Port, cfg.RPC.Port, "8080")
+	// 从已合并的配置中获取值（LoadAndMergeForRPC 已经处理了 flag 优先、配置文件、默认值的逻辑）
+	dsn := cfg.Database.DSN
+	port := cfg.RPC.Port
 
 	// 设置全局变量供 tx_parse.go 使用
-	globalChainGRPC = config.GetFinalValue(flags.ChainGRPC, flagInfo.ChainGRPC, cfg.Node.GRPC, "localhost:8802")
-	globalChainSymbol = config.GetFinalValue(flags.ChainSymbol, flagInfo.ChainSymbol, cfg.Node.Symbol, "bty")
-	globalESHost = config.GetFinalValue(flags.ESHost, flagInfo.ESHost, cfg.ES.Host, "http://localhost:9200/")
-	globalESPrefix = config.GetFinalValue(flags.ESPrefix, flagInfo.ESPrefix, cfg.ES.Prefix, "db01_")
-	globalESVersion = int(config.GetFinalIntValue(flags.ESVersion, flagInfo.ESVersion, cfg.ES.Version, 7))
-	globalESUser = config.GetFinalValue(flags.ESUser, flagInfo.ESUser, cfg.ES.User, "")
-	globalESPassword = config.GetFinalValue(flags.ESPassword, flagInfo.ESPassword, cfg.ES.Password, "")
+	globalChainGRPC = cfg.Node.GRPC
+	globalChainSymbol = cfg.Node.Symbol
+	globalESHost = cfg.ES.Host
+	globalESPrefix = cfg.ES.Prefix
+	globalESVersion = int(cfg.ES.Version)
+	globalESUser = cfg.ES.User
+	globalESPassword = cfg.ES.Password
 
 	// 连接数据库
 	db, err = database.NewDB(dsn)
