@@ -13,13 +13,24 @@ import (
 
 // InitLogger 根据日志配置初始化日志系统
 // 如果初始化失败，会返回错误，调用方应该处理错误并退出程序
-func InitLogger(logCfg config.LogConfig) (*slog.Logger, error) {
+// appName 是程序名（如 "rpc" 或 "scanner"），用于在日志文件名前添加前缀，避免多个程序使用同一配置时日志文件冲突
+func InitLogger(logCfg config.LogConfig, appName string) (*slog.Logger, error) {
 	logLevel := parseLogLevel(logCfg.Level)
 
 	// 确定日志文件路径
 	logFile := logCfg.File
 	if logFile == "" {
 		logFile = "./logs/app.log"
+	}
+
+	// 如果提供了程序名，在文件名前添加前缀
+	if appName != "" {
+		logDir := filepath.Dir(logFile)
+		logBase := filepath.Base(logFile)
+		// 如果文件名已经包含程序名前缀，不再重复添加
+		if !strings.HasPrefix(logBase, appName+"_") {
+			logFile = filepath.Join(logDir, appName+"_"+logBase)
+		}
 	}
 
 	// 确保日志目录存在

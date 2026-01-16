@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// 初始化结构化日志（如果失败则退出程序）
-	slogger, err = logger.InitLogger(cfg.Log)
+	slogger, err = logger.InitLogger(cfg.Log, "rpc")
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)
 	}

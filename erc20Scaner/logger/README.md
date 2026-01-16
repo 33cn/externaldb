@@ -35,7 +35,8 @@ func main() {
     }
 
     // 初始化日志（如果失败则退出程序）
-    log, err = logger.InitLogger(cfg.Log)
+    // 第二个参数是程序名，用于在日志文件名前添加前缀，避免多个程序使用同一配置时日志文件冲突
+    log, err = logger.InitLogger(cfg.Log, "scanner")
     if err != nil {
         log.Fatalf("Failed to initialize logger: %v", err)
         return
@@ -128,7 +129,7 @@ func main() {
         return
     }
     
-    log, err = logger.InitLogger(cfg.Log)
+    log, err = logger.InitLogger(cfg.Log, "scanner")
     if err != nil {
         fmt.Printf("Failed to initialize logger: %v\n", err)
         return
@@ -152,7 +153,7 @@ func main() {
         log.Fatalf("Failed to load config: %v", err)
     }
     
-    slogger, err = logger.InitLogger(cfg.Log)
+    slogger, err = logger.InitLogger(cfg.Log, "rpc")
     if err != nil {
         log.Fatalf("Failed to initialize logger: %v", err)
     }

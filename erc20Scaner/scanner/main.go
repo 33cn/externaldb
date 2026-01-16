@@ -27,7 +27,7 @@ func main() {
 	}
 
 	// 初始化日志（如果失败则退出程序）
-	log, err = logger.InitLogger(cfg.Log)
+	log, err = logger.InitLogger(cfg.Log, "scanner")
 	if err != nil {
 		fmt.Printf("Failed to initialize logger: %v\n", err)
 		return

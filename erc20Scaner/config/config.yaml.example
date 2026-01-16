@@ -27,3 +27,6 @@ rpc:
 log:
   level: "info"
   file: "./logs/app.log"
+  max_size: 100      # 可选，默认 100
+  max_backups: 5     # 可选，默认 5
+  max_age: 30        # 可选，默认 30
