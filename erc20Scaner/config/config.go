@@ -18,7 +18,8 @@ type Config struct {
 
 // NodeConfig 节点配置
 type NodeConfig struct {
-	URL string `yaml:"url"`
+	URL  string `yaml:"url"`
+	GRPC string `yaml:"grpc"`
 }
 
 // ScannerConfig 扫描器配置

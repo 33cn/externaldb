@@ -632,8 +632,13 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 	}
 
 	// 解析所有日志，查找Transfer事件
-	var transfers []TransferInfo
-	for _, log := range receipt.Logs {
+	// 使用结构体保存log index，以便后续正确保存
+	type TransferWithLogIndex struct {
+		TransferInfo
+		LogIndex uint // 实际的log index
+	}
+	var transfers []TransferWithLogIndex
+	for logIndex, log := range receipt.Logs {
 		// 检查日志主题是否匹配Transfer事件（第一个topic是事件签名hash）
 		if len(log.Topics) < 3 {
 			continue
@@ -671,12 +676,15 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 			}
 		}
 
-		transfers = append(transfers, TransferInfo{
-			TokenAddress: tokenAddress,
-			From:         from,
-			To:           to,
-			Value:        value,
-			TokenInfo:    *tokenInfo,
+		transfers = append(transfers, TransferWithLogIndex{
+			TransferInfo: TransferInfo{
+				TokenAddress: tokenAddress,
+				From:         from,
+				To:           to,
+				Value:        value,
+				TokenInfo:    *tokenInfo,
+			},
+			LogIndex: uint(logIndex), // 保存实际的log index
 		})
 	}
 
@@ -739,79 +747,110 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 
 	// 写入数据库
 	if p.enableDB {
-		// 确定合约地址（使用第一个transfer的合约地址）
-		contractAddress := transfers[0].TokenAddress
+		// 收集所有不同的ERC20合约地址
+		contractAddresses := make(map[common.Address]bool)
+		for _, transfer := range transfers {
+			contractAddresses[transfer.TokenAddress] = true
+		}
 
-		// 检查合约是否已经记录到数据库, 如果没有需要通过合约地址查询合约信息并检查是否为erc20合约
-		// 如果是erc20合约, 需要在数据库中记录合约信息
-		// 规范化地址为小写，确保大小写不敏感查询
-		_, err := p.db.GetContractByAddress(normalizeAddress(contractAddress.Hex()))
-		if err != nil {
-			// 合约不在数据库中，需要查询并保存
-			log.Info("Contract not found in database, querying contract info", "contract", contractAddress.Hex())
-
-			// 验证是否为ERC20合约
-			isERC20, err := p.checkERC20BySelector(&contractAddress)
+		// 为每个不同的ERC20合约分别处理
+		for contractAddress := range contractAddresses {
+			// 检查合约是否已经记录到数据库, 如果没有需要通过合约地址查询合约信息并检查是否为erc20合约
+			// 如果是erc20合约, 需要在数据库中记录合约信息
+			// 规范化地址为小写，确保大小写不敏感查询
+			_, err := p.db.GetContractByAddress(normalizeAddress(contractAddress.Hex()))
 			if err != nil {
-				log.Warn("Failed to verify ERC20 contract",
-					"err", err,
-					"contract", contractAddress.Hex())
-				// 即使验证失败，也继续处理transfer事件
-				return fmt.Errorf("not Erc20, error: %v", err)
-			} else if !isERC20 {
-				log.Warn("Contract is not ERC20, but has Transfer event, continuing",
-					"contract", contractAddress.Hex())
-				// 虽然不是ERC20，但既然有Transfer事件，也继续处理
-				return fmt.Errorf("not Erc20, but has Transfer event")
-			} else {
-				// 是ERC20合约，获取合约信息并保存
-				log.Info("Contract is ERC20, fetching contract info", "contract", contractAddress.Hex())
-				err = p.saveContractInfoFromAddress(&contractAddress, block)
+				// 合约不在数据库中，需要查询并保存
+				log.Info("Contract not found in database, querying contract info", "contract", contractAddress.Hex())
+
+				// 验证是否为ERC20合约
+				isERC20, err := p.checkERC20BySelector(&contractAddress)
 				if err != nil {
-					log.Error("Failed to save contract info",
+					log.Warn("Failed to verify ERC20 contract",
 						"err", err,
 						"contract", contractAddress.Hex())
-					// 即使保存失败，也继续处理transfer事件
+					// 即使验证失败，也继续处理transfer事件
+					continue
+				} else if !isERC20 {
+					log.Warn("Contract is not ERC20, but has Transfer event, continuing",
+						"contract", contractAddress.Hex())
+					// 虽然不是ERC20，但既然有Transfer事件，也继续处理
+					continue
 				} else {
-					log.Info("Contract info saved to database", "contract", contractAddress.Hex())
+					// 是ERC20合约，获取合约信息并保存
+					log.Info("Contract is ERC20, fetching contract info", "contract", contractAddress.Hex())
+					err = p.saveContractInfoFromAddress(&contractAddress, block)
+					if err != nil {
+						log.Error("Failed to save contract info",
+							"err", err,
+							"contract", contractAddress.Hex())
+						// 即使保存失败，也继续处理transfer事件
+					} else {
+						log.Info("Contract info saved to database", "contract", contractAddress.Hex())
+					}
+				}
+			} else {
+				log.Debug("Contract already exists in database", "contract", contractAddress.Hex())
+			}
+
+			// 判断是直接调用还是嵌套调用
+			// 如果交易的to地址等于ERC20合约地址，且函数选择器是transfer/transferFrom，则是直接调用
+			// 否则是嵌套调用（其他合约调用了ERC20合约）
+			isDirectCall := false
+			if tx.To() != nil && *tx.To() == contractAddress {
+				if funcSelector == transferSelector || funcSelector == transferFromSelector {
+					isDirectCall = true
 				}
 			}
-		} else {
-			log.Debug("Contract already exists in database", "contract", contractAddress.Hex())
-		}
 
-		// 保存交易信息
-		funcName := "transfer"
-		if funcSelector == transferFromSelector {
-			funcName = "transferFrom"
-		}
-		err = p.saveTransactionToDB(tx, receipt, block, contractAddress, funcSelector, funcName)
-		if err != nil {
-			log.Error("Failed to save transaction to database",
-				"err", err,
-				"txHash", tx.Hash().Hex(),
-				"block", block.NumberU64())
-		} else {
-			log.Debug("Transaction saved to database",
-				"txHash", tx.Hash().Hex(),
-				"block", block.NumberU64(),
-				"funcName", funcName)
+			// 确定函数名称和选择器
+			var funcName string
+			var finalFuncSelector string
+			if isDirectCall {
+				// 直接调用，使用交易的函数选择器
+				funcName = "transfer"
+				if funcSelector == transferFromSelector {
+					funcName = "transferFrom"
+				}
+				finalFuncSelector = funcSelector
+			} else {
+				// 嵌套调用，标记为通过其他合约调用
+				funcName = "transfer"             // 嵌套调用时，可能是transfer或transferFrom，统一标记为transfer
+				finalFuncSelector = "nested_call" // 使用特殊标记表示嵌套调用
+			}
+
+			// 保存交易信息（为每个ERC20合约分别保存）
+			err = p.saveTransactionToDB(tx, receipt, block, contractAddress, finalFuncSelector, funcName)
+			if err != nil {
+				log.Error("Failed to save transaction to database",
+					"err", err,
+					"txHash", tx.Hash().Hex(),
+					"contract", contractAddress.Hex(),
+					"block", block.NumberU64())
+			} else {
+				log.Debug("Transaction saved to database",
+					"txHash", tx.Hash().Hex(),
+					"contract", contractAddress.Hex(),
+					"block", block.NumberU64(),
+					"funcName", funcName,
+					"isDirectCall", isDirectCall)
+			}
 		}
 
 		// 保存每个Transfer事件并更新余额
-		for i, transfer := range transfers {
-			// 保存事件
-			err := p.saveEventToDB(&transfer, block, tx.Hash(), uint(i))
+		for _, transfer := range transfers {
+			// 保存事件（使用实际的log index）
+			err := p.saveEventToDB(&transfer.TransferInfo, block, tx.Hash(), transfer.LogIndex)
 			if err != nil {
 				log.Error("Failed to save event to database",
 					"err", err,
 					"txHash", tx.Hash().Hex(),
-					"logIndex", i,
+					"logIndex", transfer.LogIndex,
 					"block", block.NumberU64())
 			} else {
 				log.Debug("Event saved to database",
 					"txHash", tx.Hash().Hex(),
-					"logIndex", i,
+					"logIndex", transfer.LogIndex,
 					"from", transfer.From.Hex(),
 					"to", transfer.To.Hex(),
 					"value", transfer.Value.String(),

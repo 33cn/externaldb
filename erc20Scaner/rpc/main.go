@@ -11,13 +11,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/33cn/externaldb/erc20Scaner/config"
 	"github.com/33cn/externaldb/erc20Scaner/database"
 )
 
 var (
-	port       = flag.String("port", "8080", "HTTP server port")
-	dbDSN      = flag.String("dsn", "root:password@tcp(localhost:3306)/token_scanner?charset=utf8mb4&parseTime=True&loc=Local", "database DSN")
-	configFile = flag.String("c", "config.yaml", "config file path")
+	port        = flag.String("port", "8080", "HTTP server port")
+	dbDSN       = flag.String("dsn", "root:password@tcp(localhost:3306)/token_scanner?charset=utf8mb4&parseTime=True&loc=Local", "database DSN")
+	configFile  = flag.String("c", "config.yaml", "config file path")
+	chainGrpc   = flag.String("chain_grpc", "localhost:8802", "Chain33 gRPC host")
+	chainSymbol = flag.String("chain_symbol", "bty", "Chain33 symbol")
+	esHost      = flag.String("es_host", "http://localhost:9200/", "Elasticsearch host")
+	esPrefix    = flag.String("es_prefix", "db01_", "Elasticsearch prefix")
+	esVersion   = flag.Int("es_version", 7, "Elasticsearch version")
+	esUser      = flag.String("es_user", "", "Elasticsearch username")
+	esPassword  = flag.String("es_password", "", "Elasticsearch password")
 )
 
 // APIResponse 统一API响应格式
@@ -99,12 +107,72 @@ var db *database.DB
 func main() {
 	flag.Parse()
 
-	// 加载配置（如果使用配置文件）
-	var dsn string = *dbDSN
+	// 加载配置文件（如果存在）
+	var cfg *config.Config
 	if *configFile != "" {
-		// 这里可以添加从配置文件读取DSN的逻辑
-		// 为了简化，直接使用命令行参数
+		c, err := config.LoadConfig(*configFile)
+		if err != nil {
+			log.Printf("Warning: failed to load config file %s: %v, using defaults", *configFile, err)
+			cfg = config.GetDefaultConfig()
+		} else {
+			log.Printf("Config loaded from %s", *configFile)
+			cfg = c
+		}
+	} else {
+		cfg = config.GetDefaultConfig()
 	}
+
+	// 记录哪些flag被显式设置，用于决定是否被配置文件覆盖
+	var dsnFlag, chainGrpcFlag, esHostFlag, esPrefixFlag, esVersionFlag, esUserFlag, esPwdFlag bool
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "dsn":
+			dsnFlag = true
+		case "chain_grpc":
+			chainGrpcFlag = true
+		case "es_host":
+			esHostFlag = true
+		case "es_prefix":
+			esPrefixFlag = true
+		case "es_version":
+			esVersionFlag = true
+		case "es_user":
+			esUserFlag = true
+		case "es_password":
+			esPwdFlag = true
+		}
+	})
+
+	// 使用配置文件覆盖未显式设置的参数
+	if cfg != nil {
+		// 数据库 DSN
+		if !dsnFlag && cfg.Database.DSN != "" {
+			*dbDSN = cfg.Database.DSN
+		}
+		// Chain33 gRPC
+		if !chainGrpcFlag && cfg.Node.GRPC != "" {
+			*chainGrpc = cfg.Node.GRPC
+		}
+		// ES 配置（用于从 ES 查询 ABI）
+		if cfg.ES.Host != "" && !esHostFlag {
+			*esHost = cfg.ES.Host
+		}
+		if cfg.ES.Prefix != "" && !esPrefixFlag {
+			*esPrefix = cfg.ES.Prefix
+		}
+		if cfg.ES.Version != 0 && !esVersionFlag {
+			*esVersion = int(cfg.ES.Version)
+		}
+		if cfg.ES.User != "" && !esUserFlag {
+			*esUser = cfg.ES.User
+		}
+		if cfg.ES.Password != "" && !esPwdFlag {
+			*esPassword = cfg.ES.Password
+		}
+	}
+
+	// 最终使用的 DSN
+	dsn := *dbDSN
 
 	// 连接数据库
 	var err error
@@ -120,9 +188,12 @@ func main() {
 	// 注册路由（注意：handleContractAddressTransactions 和 handleContractAddressTransfers 会先检查路径，如果不是匹配的格式会调用 handleContractDetail）
 	http.HandleFunc("/api/contract/", handleContractAddressTransfers)
 	http.HandleFunc("/api/contracts", handleContractList)
+	http.HandleFunc("/api/token/", handleTokenDetail)
+	http.HandleFunc("/api/tokens", handleTokenList)
 	http.HandleFunc("/api/transfers/", handleTransfers)
 	http.HandleFunc("/api/transactions/", handleTransactions)
 	http.HandleFunc("/api/holders/", handleHolders)
+	http.HandleFunc("/api/parse_tx", handleParseTx)
 	http.HandleFunc("/health", handleHealth)
 
 	// 启动服务器
@@ -451,6 +522,67 @@ func handleContractDetail(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleTokenDetail 查询指定ERC20代币的详细信息
+// GET /api/token/{address}
+func handleTokenDetail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// 从URL路径提取代币地址
+	path := strings.TrimPrefix(r.URL.Path, "/api/token/")
+	if path == "" {
+		writeError(w, http.StatusBadRequest, "Token address is required")
+		return
+	}
+
+	// 验证地址格式（简单检查）
+	if !strings.HasPrefix(strings.ToLower(path), "0x") || len(path) != 42 {
+		writeError(w, http.StatusBadRequest, "Invalid token address format")
+		return
+	}
+
+	// 规范化地址为小写
+	path = normalizeAddress(path)
+
+	contract, err := db.GetContractByAddress(path)
+	if err != nil {
+		writeError(w, http.StatusNotFound, fmt.Sprintf("Token not found: %v", err))
+		return
+	}
+
+	// 检查是否是ERC20代币
+	if contract.ContractType != "ERC20" {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("Address is not an ERC20 token, contract type: %s", contract.ContractType))
+		return
+	}
+
+	// 格式化总供应量
+	totalSupplyFormatted := formatTokenAmount(contract.TotalSupply, contract.Decimals)
+
+	detail := ContractDetail{
+		Address:              contract.ContractAddress,
+		Name:                 contract.ContractName,
+		Symbol:               contract.ContractSymbol,
+		Type:                 contract.ContractType,
+		Decimals:             contract.Decimals,
+		TotalSupply:          contract.TotalSupply.String(),
+		TotalSupplyFormatted: totalSupplyFormatted,
+		DeployTxHash:         contract.DeployTxHash,
+		DeployBlockNumber:    contract.DeployBlockNumber,
+		DeployTime:           contract.DeployBlockTime,
+		Deployer:             contract.DeployerAddress,
+		VerificationStatus:   contract.VerificationStatus,
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Code:    0,
+		Message: "Success",
+		Data:    detail,
+	})
+}
+
 // handleContractList 查询合约列表
 // GET /api/contracts?page=1&size=20&symbol=USDT
 func handleContractList(w http.ResponseWriter, r *http.Request) {
@@ -525,6 +657,107 @@ func handleContractList(w http.ResponseWriter, r *http.Request) {
 			"page":      page,
 			"size":      size,
 			"total":     len(contracts),
+		},
+	})
+}
+
+// handleTokenList 查询ERC20 token列表
+// GET /api/tokens?page=1&size=20&symbol=USDT&name=Token
+func handleTokenList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// 解析查询参数
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	if size < 1 || size > 100 {
+		size = 20
+	}
+	symbol := r.URL.Query().Get("symbol")
+	name := r.URL.Query().Get("name")
+
+	// 构建查询，只查询ERC20类型的合约
+	offset := (page - 1) * size
+	query := `SELECT contract_address, contract_name, contract_symbol, contract_type, 
+	          decimals, total_supply, deploy_block_time 
+	          FROM contracts WHERE contract_type = 'ERC20'`
+	args := []interface{}{}
+
+	if symbol != "" {
+		query += " AND contract_symbol LIKE ?"
+		args = append(args, "%"+symbol+"%")
+	}
+	if name != "" {
+		query += " AND contract_name LIKE ?"
+		args = append(args, "%"+name+"%")
+	}
+
+	query += " ORDER BY deploy_block_time DESC LIMIT ? OFFSET ?"
+	args = append(args, size, offset)
+
+	rows, err := db.GetConn().Query(query, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Database error: %v", err))
+		return
+	}
+	defer rows.Close()
+
+	var tokens []ContractListItem
+	for rows.Next() {
+		var item ContractListItem
+		var totalSupplyStr string
+		err := rows.Scan(
+			&item.Address,
+			&item.Name,
+			&item.Symbol,
+			&item.Type,
+			&item.Decimals,
+			&totalSupplyStr,
+			&item.DeployTime,
+		)
+		if err != nil {
+			continue
+		}
+
+		// 解析总供应量
+		totalSupply, _ := new(big.Int).SetString(totalSupplyStr, 10)
+		item.TotalSupply = totalSupplyStr
+		item.TotalSupplyFormatted = formatTokenAmount(totalSupply, item.Decimals)
+
+		tokens = append(tokens, item)
+	}
+
+	// 获取总数（用于分页）
+	countQuery := `SELECT COUNT(*) FROM contracts WHERE contract_type = 'ERC20'`
+	countArgs := []interface{}{}
+	if symbol != "" {
+		countQuery += " AND contract_symbol LIKE ?"
+		countArgs = append(countArgs, "%"+symbol+"%")
+	}
+	if name != "" {
+		countQuery += " AND contract_name LIKE ?"
+		countArgs = append(countArgs, "%"+name+"%")
+	}
+
+	var total int
+	err = db.GetConn().QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		total = len(tokens) // 如果查询总数失败，使用当前返回的数量
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Code:    0,
+		Message: "Success",
+		Data: map[string]interface{}{
+			"tokens": tokens,
+			"page":   page,
+			"size":   size,
+			"total":  total,
 		},
 	})
 }
@@ -861,4 +1094,45 @@ func formatTokenAmount(amount *big.Int, decimals uint8) string {
 	}
 
 	return quotient.String() + "." + remainderStr
+}
+
+// handleParseTx 解析EVM交易
+// POST /api/parse_tx
+// Request: {"tx_hash": "0x..."}
+// Response: EvmTxInfo
+func handleParseTx(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	var req struct {
+		TxHash string `json:"tx_hash"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("Invalid request body: %v", err))
+		return
+	}
+
+	if req.TxHash == "" {
+		writeError(w, http.StatusBadRequest, "tx_hash is required")
+		return
+	}
+
+	// 从Chain33节点获取交易详情
+	detail, err := getTxDetailFromChain33(*chainGrpc, req.TxHash)
+	if err != nil {
+		writeError(w, http.StatusNotFound, fmt.Sprintf("Transaction not found: %v", err))
+		return
+	}
+
+	// 解析EVM交易
+	parsed := parseEvmTx(detail, getAbiFromES, *chainSymbol)
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Code:    0,
+		Message: "Success",
+		Data:    parsed,
+	})
 }
