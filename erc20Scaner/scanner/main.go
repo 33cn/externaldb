@@ -13,145 +13,32 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var (
-	configFile = flag.String("c", "config.yaml", "config file path")
-	rawUrl     = flag.String("u", "", "node url (overrides config)")
-	startPoint = flag.Int64("s", 0, "start point (overrides config)")
-	endPoint   = flag.Int64("e", 0, "end point (overrides config, use -1 for unlimited)")
-	enableDB   = flag.Bool("db", false, "enable database write (overrides config)")
-	dbDSN      = flag.String("dsn", "", "database DSN (overrides config)")
-	// ES相关参数
-	esEnabled  = flag.Bool("es", false, "enable ES mode (read blocks from ES, overrides config)")
-	esHost     = flag.String("es-host", "", "ES host (overrides config)")
-	esPrefix   = flag.String("es-prefix", "", "ES prefix (overrides config)")
-	esVersion  = flag.Int("es-version", 0, "ES version (6 or 7, overrides config)")
-	esUser     = flag.String("es-user", "", "ES username (overrides config)")
-	esPassword = flag.String("es-pwd", "", "ES password (overrides config)")
-	// 42241940-42241949 34562327- deploy contract
-	// 42399545-42399546 token transfer
-	//
-)
-
 var log *slog.Logger
 
 func main() {
+	// 定义命令行参数
+	flags := config.DefineScannerFlags()
 	flag.Parse()
 
-	// 加载配置文件
-	cfg, err := config.LoadConfig(*configFile)
+	// 加载并合并配置
+	cfg, err := config.LoadAndMergeForScanner(flags)
 	if err != nil {
-		// 先使用标准log输出，因为log15还未初始化
-		fmt.Printf("Warning: Failed to load config file %s: %v, using defaults\n", *configFile, err)
-		cfg = config.GetDefaultConfig()
-	} else {
-		fmt.Printf("Config loaded from %s\n", *configFile)
+		// 使用 fmt 输出，因为 log 还未初始化
+		fmt.Printf("Failed to load config: %v\n", err)
+		return
 	}
 
-	// 初始化日志系统
-	logLevel := slog.LevelDebug
-	if cfg.Log.Level != "" {
-		if cfg.Log.Level == "debug" {
-			logLevel = slog.LevelDebug
-		} else if cfg.Log.Level == "info" {
-			logLevel = slog.LevelInfo
-		} else if cfg.Log.Level == "warn" {
-			logLevel = slog.LevelWarn
-		} else if cfg.Log.Level == "error" {
-			logLevel = slog.LevelError
-		}
-	}
+	// 初始化日志
+	log = initLogger(cfg)
 
-	rotateWriter := lumberjack.Logger{
-
-		// 指定日志文件前缀和路径。备份文件将保留在同一目录。
-		// 例如：./logs/app.log, ./logs/app-2025-12-22T08-30-00.log.gz
-		Filename:   "./logs/app.log", // 日志文件的基础名，即前缀
-		MaxSize:    100,              // 单位：MB。日志文件达到此大小后轮转
-		MaxBackups: 5,                // 保留旧日志文件的最大数量
-		MaxAge:     30,               // 单位：天。根据文件名中的时间戳删除旧文件
-		Compress:   true,             // 是否压缩轮转后的旧日志文件
-		// 更多可选配置...
-	}
-	defer rotateWriter.Close()
-	handler := slog.NewJSONHandler(&rotateWriter, &slog.HandlerOptions{
-		Level: logLevel,
-	})
-
-	log = slog.New(handler)
-	// 记得在应用退出前关闭处理器，确保日志写入完成
-
-	// 合并命令行参数（命令行参数优先级更高）
-	// 使用flag.Visit检查参数是否被显式设置
-	var nodeURL *string
-	if *rawUrl != "" {
-		nodeURL = rawUrl
-	}
-
-	var startBlock *int64
-	var endBlock *int64
-	var dbEnabled *bool
-	var dbDSNStr *string
-	var esEnabledFlag *bool
-	var esHostFlag *string
-	var esPrefixFlag *string
-	var esVersionFlag *int32
-	var esUserFlag *string
-	var esPasswordFlag *string
-
-	flag.Visit(func(f *flag.Flag) {
-		switch f.Name {
-		case "s":
-			startBlock = startPoint
-		case "e":
-			endBlock = endPoint
-		case "db":
-			dbEnabled = enableDB
-		case "es":
-			esEnabledFlag = esEnabled
-		case "es-host":
-			esHostFlag = esHost
-		case "es-prefix":
-			esPrefixFlag = esPrefix
-		case "es-version":
-			v := int32(*esVersion)
-			esVersionFlag = &v
-		case "es-user":
-			esUserFlag = esUser
-		case "es-pwd":
-			esPasswordFlag = esPassword
-		}
-	})
-
-	if *dbDSN != "" {
-		dbDSNStr = dbDSN
-	}
-
-	cfg.MergeWithFlags(nodeURL, startBlock, endBlock, dbEnabled, dbDSNStr,
-		esEnabledFlag, esHostFlag, esPrefixFlag, esVersionFlag, esUserFlag, esPasswordFlag)
-
-	// 打印最终配置（使用结构化日志）
-	log.Info("=== Configuration ===",
-		"nodeURL", cfg.Node.URL,
-		"startBlock", cfg.Scanner.StartBlock,
-		"endBlock", cfg.Scanner.EndBlock,
-		"dbEnabled", cfg.Database.Enabled,
-		"esEnabled", cfg.ES.Enabled)
-
-	log.Debug("=== Configuration Debug ===",
-		"nodeURL", cfg.Node.URL)
-
-	if cfg.Database.Enabled {
-		log.Info("Database configuration", "dsn", maskDSN(cfg.Database.DSN))
-	}
-	if cfg.ES.Enabled {
-		log.Info("ES configuration",
-			"host", cfg.ES.Host,
-			"prefix", cfg.ES.Prefix,
-			"version", cfg.ES.Version,
-			"user", cfg.ES.User)
-	}
+	// 打印配置信息
+	logConfig(cfg, log)
 
 	// 初始化并启动
+	initAndStart(cfg)
+}
+
+func initAndStart(cfg *config.Config) {
 	p := new(Process)
 	p.startPoint = uint64(cfg.Scanner.StartBlock)
 	p.endPoint = uint64(cfg.Scanner.EndBlock)
@@ -177,6 +64,54 @@ func main() {
 		p.Init()
 		defer p.Close()
 		p.Start()
+	}
+}
+
+func initLogger(cfg *config.Config) *slog.Logger {
+	logLevel := slog.LevelDebug
+	switch cfg.Log.Level {
+	case "debug":
+		logLevel = slog.LevelDebug
+	case "info":
+		logLevel = slog.LevelInfo
+	case "warn":
+		logLevel = slog.LevelWarn
+	case "error":
+		logLevel = slog.LevelError
+	}
+
+	rotateWriter := lumberjack.Logger{
+		Filename:   "./logs/app.log",
+		MaxSize:    100,
+		MaxBackups: 5,
+		MaxAge:     30,
+		Compress:   true,
+	}
+	defer rotateWriter.Close()
+
+	handler := slog.NewJSONHandler(&rotateWriter, &slog.HandlerOptions{
+		Level: logLevel,
+	})
+	return slog.New(handler)
+}
+
+func logConfig(cfg *config.Config, log *slog.Logger) {
+	log.Info("=== Configuration ===",
+		"nodeURL", cfg.Node.URL,
+		"startBlock", cfg.Scanner.StartBlock,
+		"endBlock", cfg.Scanner.EndBlock,
+		"dbEnabled", cfg.Database.Enabled,
+		"esEnabled", cfg.ES.Enabled)
+
+	if cfg.Database.Enabled {
+		log.Info("Database configuration", "dsn", maskDSN(cfg.Database.DSN))
+	}
+	if cfg.ES.Enabled {
+		log.Info("ES configuration",
+			"host", cfg.ES.Host,
+			"prefix", cfg.ES.Prefix,
+			"version", cfg.ES.Version,
+			"user", cfg.ES.User)
 	}
 }
 

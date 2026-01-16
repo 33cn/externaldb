@@ -16,16 +16,14 @@ import (
 )
 
 var (
-	port        = flag.String("port", "8080", "HTTP server port")
-	dbDSN       = flag.String("dsn", "root:password@tcp(localhost:3306)/token_scanner?charset=utf8mb4&parseTime=True&loc=Local", "database DSN")
-	configFile  = flag.String("c", "config.yaml", "config file path")
-	chainGrpc   = flag.String("chain_grpc", "localhost:8802", "Chain33 gRPC host")
-	chainSymbol = flag.String("chain_symbol", "bty", "Chain33 symbol")
-	esHost      = flag.String("es_host", "http://localhost:9200/", "Elasticsearch host")
-	esPrefix    = flag.String("es_prefix", "db01_", "Elasticsearch prefix")
-	esVersion   = flag.Int("es_version", 7, "Elasticsearch version")
-	esUser      = flag.String("es_user", "", "Elasticsearch username")
-	esPassword  = flag.String("es_password", "", "Elasticsearch password")
+	// 全局配置变量，供 tx_parse.go 使用
+	globalChainGRPC   string
+	globalChainSymbol string
+	globalESHost      string
+	globalESPrefix    string
+	globalESVersion   int
+	globalESUser      string
+	globalESPassword  string
 )
 
 // APIResponse 统一API响应格式
@@ -105,77 +103,31 @@ type HolderInfo struct {
 var db *database.DB
 
 func main() {
+	// 定义命令行参数
+	flags := config.DefineRPCFlags()
 	flag.Parse()
 
-	// 加载配置文件（如果存在）
-	var cfg *config.Config
-	if *configFile != "" {
-		c, err := config.LoadConfig(*configFile)
-		if err != nil {
-			log.Printf("Warning: failed to load config file %s: %v, using defaults", *configFile, err)
-			cfg = config.GetDefaultConfig()
-		} else {
-			log.Printf("Config loaded from %s", *configFile)
-			cfg = c
-		}
-	} else {
-		cfg = config.GetDefaultConfig()
+	// 加载并合并配置
+	cfg, err := config.LoadAndMergeForRPC(flags)
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// 记录哪些flag被显式设置，用于决定是否被配置文件覆盖
-	var dsnFlag, chainGrpcFlag, esHostFlag, esPrefixFlag, esVersionFlag, esUserFlag, esPwdFlag bool
-	flag.Visit(func(f *flag.Flag) {
-		switch f.Name {
-		case "dsn":
-			dsnFlag = true
-		case "chain_grpc":
-			chainGrpcFlag = true
-		case "es_host":
-			esHostFlag = true
-		case "es_prefix":
-			esPrefixFlag = true
-		case "es_version":
-			esVersionFlag = true
-		case "es_user":
-			esUserFlag = true
-		case "es_password":
-			esPwdFlag = true
-		}
-	})
+	// 获取最终配置值（flag 优先，否则使用配置文件）
+	flagInfo := config.DetectFlagSet()
+	dsn := config.GetFinalValue(flags.DBDSN, flagInfo.DBDSN, cfg.Database.DSN, "root:password@tcp(localhost:3306)/token_scanner?charset=utf8mb4&parseTime=True&loc=Local")
+	port := config.GetFinalValue(flags.Port, flagInfo.Port, cfg.RPC.Port, "8080")
 
-	// 使用配置文件覆盖未显式设置的参数
-	if cfg != nil {
-		// 数据库 DSN
-		if !dsnFlag && cfg.Database.DSN != "" {
-			*dbDSN = cfg.Database.DSN
-		}
-		// Chain33 gRPC
-		if !chainGrpcFlag && cfg.Node.GRPC != "" {
-			*chainGrpc = cfg.Node.GRPC
-		}
-		// ES 配置（用于从 ES 查询 ABI）
-		if cfg.ES.Host != "" && !esHostFlag {
-			*esHost = cfg.ES.Host
-		}
-		if cfg.ES.Prefix != "" && !esPrefixFlag {
-			*esPrefix = cfg.ES.Prefix
-		}
-		if cfg.ES.Version != 0 && !esVersionFlag {
-			*esVersion = int(cfg.ES.Version)
-		}
-		if cfg.ES.User != "" && !esUserFlag {
-			*esUser = cfg.ES.User
-		}
-		if cfg.ES.Password != "" && !esPwdFlag {
-			*esPassword = cfg.ES.Password
-		}
-	}
-
-	// 最终使用的 DSN
-	dsn := *dbDSN
+	// 设置全局变量供 tx_parse.go 使用
+	globalChainGRPC = config.GetFinalValue(flags.ChainGRPC, flagInfo.ChainGRPC, cfg.Node.GRPC, "localhost:8802")
+	globalChainSymbol = config.GetFinalValue(flags.ChainSymbol, flagInfo.ChainSymbol, cfg.Node.Symbol, "bty")
+	globalESHost = config.GetFinalValue(flags.ESHost, flagInfo.ESHost, cfg.ES.Host, "http://localhost:9200/")
+	globalESPrefix = config.GetFinalValue(flags.ESPrefix, flagInfo.ESPrefix, cfg.ES.Prefix, "db01_")
+	globalESVersion = int(config.GetFinalIntValue(flags.ESVersion, flagInfo.ESVersion, cfg.ES.Version, 7))
+	globalESUser = config.GetFinalValue(flags.ESUser, flagInfo.ESUser, cfg.ES.User, "")
+	globalESPassword = config.GetFinalValue(flags.ESPassword, flagInfo.ESPassword, cfg.ES.Password, "")
 
 	// 连接数据库
-	var err error
 	db, err = database.NewDB(dsn)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -183,7 +135,7 @@ func main() {
 	defer db.Close()
 
 	log.Printf("Database connected successfully")
-	log.Printf("Starting HTTP server on port %s", *port)
+	log.Printf("Starting HTTP server on port %s", port)
 
 	// 注册路由（注意：handleContractAddressTransactions 和 handleContractAddressTransfers 会先检查路径，如果不是匹配的格式会调用 handleContractDetail）
 	http.HandleFunc("/api/contract/", handleContractAddressTransfers)
@@ -197,7 +149,7 @@ func main() {
 	http.HandleFunc("/health", handleHealth)
 
 	// 启动服务器
-	addr := fmt.Sprintf(":%s", *port)
+	addr := fmt.Sprintf(":%s", port)
 	log.Printf("Server listening on http://localhost%s", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
@@ -1121,14 +1073,14 @@ func handleParseTx(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 从Chain33节点获取交易详情
-	detail, err := getTxDetailFromChain33(*chainGrpc, req.TxHash)
+	detail, err := getTxDetailFromChain33(globalChainGRPC, req.TxHash)
 	if err != nil {
 		writeError(w, http.StatusNotFound, fmt.Sprintf("Transaction not found: %v", err))
 		return
 	}
 
 	// 解析EVM交易
-	parsed := parseEvmTx(detail, getAbiFromES, *chainSymbol)
+	parsed := parseEvmTx(detail, getAbiFromES, globalChainSymbol)
 
 	writeJSON(w, http.StatusOK, APIResponse{
 		Code:    0,

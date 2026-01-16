@@ -105,7 +105,7 @@ func isEvmTx(execer string) bool {
 
 // getAbiFromES 从ES获取ABI
 func getAbiFromES(address string) (string, error) {
-	cli, err := escli.NewESShortConnect(*esHost, *esPrefix, int32(*esVersion), *esUser, *esPassword)
+	cli, err := escli.NewESShortConnect(globalESHost, globalESPrefix, int32(globalESVersion), globalESUser, globalESPassword)
 	if err != nil {
 		log.Printf("ParseTx: NewESShortConnect failed: %v", err)
 		return "", err

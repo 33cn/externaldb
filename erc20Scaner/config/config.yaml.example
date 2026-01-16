@@ -1,0 +1,29 @@
+node:
+  url: "https://mainnet.bityuan.com/eth"
+  grpc: "localhost:8802"
+  symbol: "bty"
+
+
+database:
+  enabled: true
+  dsn: "root:password@tcp(localhost:3306)/token_scanner?charset=utf8mb4&parseTime=True&loc=Local"
+
+es:
+  enabled: false
+  host: "http://localhost:9200/"
+  prefix: "db01_"
+  version: 7
+  user: "elastic"
+  password: "elastic"
+
+
+scanner:
+  start_block: 42399544
+  end_block: -1
+
+rpc:
+  port: "8080"
+
+log:
+  level: "info"
+  file: "./logs/app.log"
