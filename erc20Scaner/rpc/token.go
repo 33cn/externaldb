@@ -1,0 +1,172 @@
+package main
+
+import (
+	"fmt"
+	"math/big"
+	"net/http"
+	"strconv"
+	"strings"
+)
+
+// handleTokenDetail 查询指定ERC20代币的详细信息
+// GET /api/token/{address}
+func handleTokenDetail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// 从URL路径提取代币地址
+	path := strings.TrimPrefix(r.URL.Path, "/api/token/")
+	if path == "" {
+		writeError(w, http.StatusBadRequest, "Token address is required")
+		return
+	}
+
+	// 验证地址格式（简单检查）
+	if !strings.HasPrefix(strings.ToLower(path), "0x") || len(path) != 42 {
+		writeError(w, http.StatusBadRequest, "Invalid token address format")
+		return
+	}
+
+	// 规范化地址为小写
+	path = normalizeAddress(path)
+
+	contract, err := db.GetContractByAddress(path)
+	if err != nil {
+		writeError(w, http.StatusNotFound, fmt.Sprintf("Token not found: %v", err))
+		return
+	}
+
+	// 检查是否是ERC20代币
+	if contract.ContractType != "ERC20" {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("Address is not an ERC20 token, contract type: %s", contract.ContractType))
+		return
+	}
+
+	// 格式化总供应量
+	totalSupplyFormatted := formatTokenAmount(contract.TotalSupply, contract.Decimals)
+
+	detail := ContractDetail{
+		Address:              contract.ContractAddress,
+		Name:                 contract.ContractName,
+		Symbol:               contract.ContractSymbol,
+		Type:                 contract.ContractType,
+		Decimals:             contract.Decimals,
+		TotalSupply:          contract.TotalSupply.String(),
+		TotalSupplyFormatted: totalSupplyFormatted,
+		DeployTxHash:         contract.DeployTxHash,
+		DeployBlockNumber:    contract.DeployBlockNumber,
+		DeployTime:           contract.DeployBlockTime,
+		Deployer:             contract.DeployerAddress,
+		VerificationStatus:   contract.VerificationStatus,
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Code:    0,
+		Message: "Success",
+		Data:    detail,
+	})
+}
+
+// handleTokenList 查询ERC20 token列表
+// GET /api/tokens?page=1&size=20&symbol=USDT&name=Token
+func handleTokenList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	// 解析查询参数
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	if size < 1 || size > 100 {
+		size = 20
+	}
+	symbol := r.URL.Query().Get("symbol")
+	name := r.URL.Query().Get("name")
+
+	// 构建查询，只查询ERC20类型的合约
+	offset := (page - 1) * size
+	query := `SELECT contract_address, contract_name, contract_symbol, contract_type, 
+	          decimals, total_supply, deploy_block_time 
+	          FROM contracts WHERE contract_type = 'ERC20'`
+	args := []interface{}{}
+
+	if symbol != "" {
+		query += " AND contract_symbol LIKE ?"
+		args = append(args, "%"+symbol+"%")
+	}
+	if name != "" {
+		query += " AND contract_name LIKE ?"
+		args = append(args, "%"+name+"%")
+	}
+
+	query += " ORDER BY deploy_block_time DESC LIMIT ? OFFSET ?"
+	args = append(args, size, offset)
+
+	rows, err := db.GetConn().Query(query, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Database error: %v", err))
+		return
+	}
+	defer rows.Close()
+
+	var tokens []ContractListItem
+	for rows.Next() {
+		var item ContractListItem
+		var totalSupplyStr string
+		err := rows.Scan(
+			&item.Address,
+			&item.Name,
+			&item.Symbol,
+			&item.Type,
+			&item.Decimals,
+			&totalSupplyStr,
+			&item.DeployTime,
+		)
+		if err != nil {
+			continue
+		}
+
+		// 解析总供应量
+		totalSupply, _ := new(big.Int).SetString(totalSupplyStr, 10)
+		item.TotalSupply = totalSupplyStr
+		item.TotalSupplyFormatted = formatTokenAmount(totalSupply, item.Decimals)
+
+		tokens = append(tokens, item)
+	}
+
+	// 获取总数（用于分页）
+	countQuery := `SELECT COUNT(*) FROM contracts WHERE contract_type = 'ERC20'`
+	countArgs := []interface{}{}
+	if symbol != "" {
+		countQuery += " AND contract_symbol LIKE ?"
+		countArgs = append(countArgs, "%"+symbol+"%")
+	}
+	if name != "" {
+		countQuery += " AND contract_name LIKE ?"
+		countArgs = append(countArgs, "%"+name+"%")
+	}
+
+	var total int
+	err = db.GetConn().QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		total = len(tokens) // 如果查询总数失败，使用当前返回的数量
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Code:    0,
+		Message: "Success",
+		Data: map[string]interface{}{
+			"tokens": tokens,
+			"page":   page,
+			"size":   size,
+			"total":  total,
+		},
+	})
+}
+
