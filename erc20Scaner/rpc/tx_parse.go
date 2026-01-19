@@ -58,6 +58,7 @@ type EvmTxInfo struct {
 // EvmFunctionCall 函数调用信息
 type EvmFunctionCall struct {
 	FuncName string
+	MethodID string
 	Args     string
 }
 
@@ -202,6 +203,7 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 	// coins 转账
 	if len(ntx.Data()) == 0 {
 		info.Func.FuncName = "transfer"
+		info.Func.MethodID = ToHex(payload.Para[:4])
 		info.Func.Args = fmt.Sprintf("{\"to\": \"%v\",\"amount\": \"%v\"}", ToHex(payload.Para), info.Amount)
 		if txDetail.Receipt.Ty == 2 {
 			info.ExecSuccess = true
@@ -212,6 +214,7 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 	if txDetail.ActionName == EvmActionNameCreate {
 		info.IsCreateContract = true
 		info.Func.FuncName = "deploy_contract"
+		info.Func.MethodID = "0x00000000"
 		_ = parseLogs("", txDetail, &info)
 		info.Func.Args = fmt.Sprintf("{\"contract\": \"%v\"}", info.ContractAddress)
 		return &info
