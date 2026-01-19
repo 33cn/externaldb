@@ -71,7 +71,7 @@ fi
 
 # 编译 RPC
 echo "  编译 rpc-server..."
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o "${PKG_DIR}/bin/rpc-server" ./rpc/main.go
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o "${PKG_DIR}/bin/rpc-server" ./rpc/*.go
 if [ $? -eq 0 ]; then
     echo -e "  ${GREEN}✓ rpc-server 编译成功${NC}"
 else

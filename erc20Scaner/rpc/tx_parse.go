@@ -357,6 +357,7 @@ func getTransferLogsFromDB(evmHash string) ([]EvmEvent, error) {
 			Name: "Transfer",
 			Args: args,
 		}
+		log.Printf("getTransferLogsFromDB: event: %v", event)
 
 		events = append(events, event)
 	}

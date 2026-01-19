@@ -34,6 +34,12 @@ func handleTokensRouter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// /api/tokens/{address}/transfers
+	if len(parts) == 2 && parts[1] == "transfers" {
+		handleTokenTransfers(w, r, parts[0])
+		return
+	}
+
 	writeError(w, http.StatusNotFound, "Invalid path")
 }
 
@@ -179,5 +185,114 @@ func handleTokenDetail(w http.ResponseWriter, r *http.Request, address string) {
 		Code:    0,
 		Message: "Success",
 		Data:    detail,
+	})
+}
+
+// handleTokenTransfers 查询指定代币的转账列表
+// GET /api/tokens/{address}/transfers?page=1&size=20&from=0x...&to=0x...
+func handleTokenTransfers(w http.ResponseWriter, r *http.Request, tokenAddress string) {
+	// 验证地址格式
+	if !strings.HasPrefix(strings.ToLower(tokenAddress), "0x") || len(tokenAddress) != 42 {
+		writeError(w, http.StatusBadRequest, "Invalid token address format")
+		return
+	}
+
+	// 规范化地址为小写
+	tokenAddress = normalizeAddress(tokenAddress)
+
+	// 先验证该地址是ERC20代币
+	contract, err := db.GetContractByAddress(tokenAddress)
+	if err != nil {
+		writeError(w, http.StatusNotFound, fmt.Sprintf("Token not found: %v", err))
+		return
+	}
+
+	// 检查是否是ERC20代币
+	if contract.ContractType != "ERC20" {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("Address is not an ERC20 token, contract type: %s", contract.ContractType))
+		return
+	}
+
+	// 解析查询参数
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	if size < 1 || size > 100 {
+		size = 20
+	}
+	fromAddr := r.URL.Query().Get("from")
+	toAddr := r.URL.Query().Get("to")
+
+	// 规范化地址参数为小写
+	if fromAddr != "" {
+		fromAddr = normalizeAddress(fromAddr)
+	}
+	if toAddr != "" {
+		toAddr = normalizeAddress(toAddr)
+	}
+
+	// 构建查询（使用LOWER()确保大小写不敏感的比较）
+	offset := (page - 1) * size
+	query := `SELECT e.tx_hash, e.block_number, e.block_time, e.from_address, e.to_address, 
+	          e.value, c.contract_symbol, c.decimals
+	          FROM events e
+	          LEFT JOIN contracts c ON LOWER(e.contract_address) = LOWER(c.contract_address)
+	          WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
+	args := []interface{}{tokenAddress}
+
+	if fromAddr != "" {
+		query += " AND LOWER(e.from_address) = ?"
+		args = append(args, fromAddr)
+	}
+	if toAddr != "" {
+		query += " AND LOWER(e.to_address) = ?"
+		args = append(args, toAddr)
+	}
+
+	query += " ORDER BY e.block_number DESC, e.log_index DESC LIMIT ? OFFSET ?"
+	args = append(args, size, offset)
+
+	rows, err := db.GetConn().Query(query, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("Database error: %v", err))
+		return
+	}
+	defer rows.Close()
+
+	var transfers []TransferRecord
+	for rows.Next() {
+		var record TransferRecord
+		var valueStr string
+		err := rows.Scan(
+			&record.TxHash,
+			&record.BlockNumber,
+			&record.BlockTime,
+			&record.From,
+			&record.To,
+			&valueStr,
+			&record.TokenSymbol,
+			&record.TokenDecimals,
+		)
+		if err != nil {
+			continue
+		}
+
+		value, _ := new(big.Int).SetString(valueStr, 10)
+		record.Value = valueStr
+		record.ValueFormatted = formatTokenAmount(value, record.TokenDecimals)
+
+		transfers = append(transfers, record)
+	}
+
+	writeJSON(w, http.StatusOK, APIResponse{
+		Code:    0,
+		Message: "Success",
+		Data: map[string]interface{}{
+			"transfers": transfers,
+			"page":      page,
+			"size":      size,
+		},
 	})
 }
