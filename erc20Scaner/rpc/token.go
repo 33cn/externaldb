@@ -8,15 +8,15 @@ import (
 	"strings"
 )
 
-// handleTokensRouter 路由分发函数，处理 /api/tokens 路径
+// handleTokensRouter 路由分发函数，处理 /evmapi/tokens 路径
 func handleTokensRouter(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
-	// 移除前缀 /api/tokens
-	path := strings.TrimPrefix(r.URL.Path, "/api/tokens")
+	// 移除前缀 /evmapi/tokens
+	path := strings.TrimPrefix(r.URL.Path, "/evmapi/tokens")
 
 	// 如果路径为空或只有 /，则是列表接口
 	if path == "" || path == "/" {
@@ -28,13 +28,13 @@ func handleTokensRouter(w http.ResponseWriter, r *http.Request) {
 	path = strings.TrimPrefix(path, "/")
 	parts := strings.Split(path, "/")
 
-	// /api/tokens/{address}
+	// /evmapi/tokens/{address}
 	if len(parts) == 1 {
 		handleTokenDetail(w, r, parts[0])
 		return
 	}
 
-	// /api/tokens/{address}/transfers
+	// /evmapi/tokens/{address}/transfers
 	if len(parts) == 2 && parts[1] == "transfers" {
 		handleTokenTransfers(w, r, parts[0])
 		return
@@ -44,7 +44,7 @@ func handleTokensRouter(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleTokenList 查询ERC20 token列表
-// GET /api/tokens?page=1&size=20&symbol=USDT&name=Token
+// GET /evmapi/tokens?page=1&size=20&symbol=USDT&name=Token
 func handleTokenList(w http.ResponseWriter, r *http.Request) {
 	// 解析查询参数
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -140,7 +140,7 @@ func handleTokenList(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleTokenDetail 查询指定ERC20代币的详细信息
-// GET /api/tokens/{address}
+// GET /evmapi/tokens/{address}
 func handleTokenDetail(w http.ResponseWriter, r *http.Request, address string) {
 	// 验证地址格式
 	if !strings.HasPrefix(strings.ToLower(address), "0x") || len(address) != 42 {
@@ -189,7 +189,7 @@ func handleTokenDetail(w http.ResponseWriter, r *http.Request, address string) {
 }
 
 // handleTokenTransfers 查询指定代币的转账列表
-// GET /api/tokens/{address}/transfers?page=1&size=20&from=0x...&to=0x...
+// GET /evmapi/tokens/{address}/transfers?page=1&size=20&from=0x...&to=0x...
 func handleTokenTransfers(w http.ResponseWriter, r *http.Request, tokenAddress string) {
 	// 验证地址格式
 	if !strings.HasPrefix(strings.ToLower(tokenAddress), "0x") || len(tokenAddress) != 42 {

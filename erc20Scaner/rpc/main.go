@@ -69,11 +69,11 @@ func main() {
 	slogger.Info("Starting HTTP server", "port", port)
 
 	// 注册路由
-	http.HandleFunc("/api/contracts", handleContractsRouter)
-	http.HandleFunc("/api/contracts/", handleContractsRouter)
-	http.HandleFunc("/api/tokens", handleTokensRouter)
-	http.HandleFunc("/api/tokens/", handleTokensRouter)
-	http.HandleFunc("/api/transactions/", handleTransactionsRouter)
+	http.HandleFunc("/evmapi/contracts", handleContractsRouter)
+	http.HandleFunc("/evmapi/contracts/", handleContractsRouter)
+	http.HandleFunc("/evmapi/tokens", handleTokensRouter)
+	http.HandleFunc("/evmapi/tokens/", handleTokensRouter)
+	http.HandleFunc("/evmapi/transactions/", handleTransactionsRouter)
 	http.HandleFunc("/health", handleHealth)
 
 	// 启动服务器

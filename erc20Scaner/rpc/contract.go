@@ -8,15 +8,15 @@ import (
 	"strings"
 )
 
-// handleContractsRouter 路由分发函数，处理 /api/contracts 路径
+// handleContractsRouter 路由分发函数，处理 /evmapi/contracts 路径
 func handleContractsRouter(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
-	// 移除前缀 /api/contracts
-	path := strings.TrimPrefix(r.URL.Path, "/api/contracts")
+	// 移除前缀 /evmapi/contracts
+	path := strings.TrimPrefix(r.URL.Path, "/evmapi/contracts")
 
 	// 如果路径为空或只有 /，则是列表接口
 	if path == "" || path == "/" {
@@ -28,37 +28,37 @@ func handleContractsRouter(w http.ResponseWriter, r *http.Request) {
 	path = strings.TrimPrefix(path, "/")
 	parts := strings.Split(path, "/")
 
-	// /api/contracts/{address}
+	// /evmapi/contracts/{address}
 	if len(parts) == 1 {
 		handleContractDetail(w, r, parts[0])
 		return
 	}
 
-	// /api/contracts/{address}/transfers
+	// /evmapi/contracts/{address}/transfers
 	if len(parts) == 2 && parts[1] == "transfers" {
 		handleContractTransfers(w, r, parts[0])
 		return
 	}
 
-	// /api/contracts/{address}/transactions
+	// /evmapi/contracts/{address}/transactions
 	if len(parts) == 2 && parts[1] == "transactions" {
 		handleContractTransactions(w, r, parts[0])
 		return
 	}
 
-	// /api/contracts/{address}/holders
+	// /evmapi/contracts/{address}/holders
 	if len(parts) == 2 && parts[1] == "holders" {
 		handleContractHolders(w, r, parts[0])
 		return
 	}
 
-	// /api/contracts/{contractAddress}/holders/{holderAddress}/transfers
+	// /evmapi/contracts/{contractAddress}/holders/{holderAddress}/transfers
 	if len(parts) == 4 && parts[1] == "holders" && parts[3] == "transfers" {
 		handleHolderTransfers(w, r, parts[0], parts[2])
 		return
 	}
 
-	// /api/contracts/{contractAddress}/holders/{holderAddress}/transactions
+	// /evmapi/contracts/{contractAddress}/holders/{holderAddress}/transactions
 	if len(parts) == 4 && parts[1] == "holders" && parts[3] == "transactions" {
 		handleHolderTransactions(w, r, parts[0], parts[2])
 		return
@@ -68,7 +68,7 @@ func handleContractsRouter(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleContractList 查询合约列表
-// GET /api/contracts?page=1&size=20&symbol=USDT
+// GET /evmapi/contracts?page=1&size=20&symbol=USDT
 func handleContractList(w http.ResponseWriter, r *http.Request) {
 	// 解析查询参数
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -141,7 +141,7 @@ func handleContractList(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleContractDetail 查询指定合约的详细信息
-// GET /api/contracts/{address}
+// GET /evmapi/contracts/{address}
 func handleContractDetail(w http.ResponseWriter, r *http.Request, address string) {
 	// 验证地址格式
 	if !strings.HasPrefix(strings.ToLower(address), "0x") || len(address) != 42 {
@@ -184,7 +184,7 @@ func handleContractDetail(w http.ResponseWriter, r *http.Request, address string
 }
 
 // handleContractTransfers 查询指定合约的所有Transfer记录
-// GET /api/contracts/{address}/transfers?page=1&size=20&from=0x...&to=0x...
+// GET /evmapi/contracts/{address}/transfers?page=1&size=20&from=0x...&to=0x...
 func handleContractTransfers(w http.ResponseWriter, r *http.Request, contractAddress string) {
 	// 验证地址格式
 	if !strings.HasPrefix(strings.ToLower(contractAddress), "0x") || len(contractAddress) != 42 {
@@ -280,7 +280,7 @@ func handleContractTransfers(w http.ResponseWriter, r *http.Request, contractAdd
 }
 
 // handleContractTransactions 查询指定合约的所有交易记录
-// GET /api/contracts/{address}/transactions?page=1&size=20&func_name=transfer
+// GET /evmapi/contracts/{address}/transactions?page=1&size=20&func_name=transfer
 func handleContractTransactions(w http.ResponseWriter, r *http.Request, contractAddress string) {
 	// 验证地址格式
 	if !strings.HasPrefix(strings.ToLower(contractAddress), "0x") || len(contractAddress) != 42 {
@@ -368,7 +368,7 @@ func handleContractTransactions(w http.ResponseWriter, r *http.Request, contract
 }
 
 // handleContractHolders 查询指定合约的Holder列表
-// GET /api/contracts/{address}/holders?page=1&size=20&min_balance=0
+// GET /evmapi/contracts/{address}/holders?page=1&size=20&min_balance=0
 func handleContractHolders(w http.ResponseWriter, r *http.Request, contractAddress string) {
 	// 验证地址格式
 	if !strings.HasPrefix(strings.ToLower(contractAddress), "0x") || len(contractAddress) != 42 {
@@ -450,7 +450,7 @@ func handleContractHolders(w http.ResponseWriter, r *http.Request, contractAddre
 }
 
 // handleHolderTransfers 查询特定合约中，特定持有者的转账记录
-// GET /api/contracts/{contractAddress}/holders/{holderAddress}/transfers?page=1&size=20&role=from|to|both
+// GET /evmapi/contracts/{contractAddress}/holders/{holderAddress}/transfers?page=1&size=20&role=from|to|both
 func handleHolderTransfers(w http.ResponseWriter, r *http.Request, contractAddress, holderAddress string) {
 	// 验证地址格式
 	if !strings.HasPrefix(strings.ToLower(contractAddress), "0x") || len(contractAddress) != 42 {
@@ -553,7 +553,7 @@ func handleHolderTransfers(w http.ResponseWriter, r *http.Request, contractAddre
 }
 
 // handleHolderTransactions 查询特定合约中，特定持有者的相关交易
-// GET /api/contracts/{contractAddress}/holders/{holderAddress}/transactions?page=1&size=20&role=from|to|both&func_name=transfer
+// GET /evmapi/contracts/{contractAddress}/holders/{holderAddress}/transactions?page=1&size=20&role=from|to|both&func_name=transfer
 func handleHolderTransactions(w http.ResponseWriter, r *http.Request, contractAddress, holderAddress string) {
 	// 验证地址格式
 	if !strings.HasPrefix(strings.ToLower(contractAddress), "0x") || len(contractAddress) != 42 {

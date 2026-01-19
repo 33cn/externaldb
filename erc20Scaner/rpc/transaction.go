@@ -6,15 +6,15 @@ import (
 	"strings"
 )
 
-// handleTransactionsRouter 路由分发函数，处理 /api/transactions 路径
+// handleTransactionsRouter 路由分发函数，处理 /evmapi/transactions 路径
 func handleTransactionsRouter(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 		return
 	}
 
-	// 移除前缀 /api/transactions
-	path := strings.TrimPrefix(r.URL.Path, "/api/transactions")
+	// 移除前缀 /evmapi/transactions
+	path := strings.TrimPrefix(r.URL.Path, "/evmapi/transactions")
 
 	// 移除开头的 /
 	path = strings.TrimPrefix(path, "/")
@@ -25,13 +25,13 @@ func handleTransactionsRouter(w http.ResponseWriter, r *http.Request) {
 
 	parts := strings.Split(path, "/")
 
-	// /api/transactions/{tx_hash}/analysis
+	// /evmapi/transactions/{tx_hash}/analysis
 	if len(parts) == 2 && parts[1] == "analysis" {
 		handleTransactionAnalysis(w, r, parts[0])
 		return
 	}
 
-	// /api/transactions/{tx_hash} - 如果需要查询交易详情，可以在这里实现
+	// /evmapi/transactions/{tx_hash} - 如果需要查询交易详情，可以在这里实现
 	if len(parts) == 1 {
 		// 目前暂不实现，返回提示
 		writeError(w, http.StatusNotImplemented, "Transaction detail query is not implemented yet")
@@ -42,7 +42,7 @@ func handleTransactionsRouter(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleTransactionAnalysis 解析并获取单笔 EVM 交易的详细动作
-// GET /api/transactions/{tx_hash}/analysis
+// GET /evmapi/transactions/{tx_hash}/analysis
 func handleTransactionAnalysis(w http.ResponseWriter, r *http.Request, txHash string) {
 	// 验证交易哈希格式
 	if !strings.HasPrefix(strings.ToLower(txHash), "0x") || len(txHash) != 66 {
