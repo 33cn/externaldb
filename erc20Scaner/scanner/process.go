@@ -746,6 +746,10 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 			contractAddresses[transfer.TokenAddress] = true
 		}
 
+		var funcName string
+		var finalFuncSelector string
+		var isDirectCall bool
+
 		// 为每个不同的ERC20合约分别处理
 		for contractAddress := range contractAddresses {
 			// 检查合约是否已经记录到数据库, 如果没有需要通过合约地址查询合约信息并检查是否为erc20合约
@@ -807,7 +811,6 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 			// 判断是直接调用还是嵌套调用
 			// 如果交易的to地址等于ERC20合约地址，且函数选择器是transfer/transferFrom，则是直接调用
 			// 否则是嵌套调用（其他合约调用了ERC20合约）
-			isDirectCall := false
 			if tx.To() != nil && *tx.To() == contractAddress {
 				if funcSelector == transferSelector || funcSelector == transferFromSelector {
 					isDirectCall = true
@@ -815,8 +818,7 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 			}
 
 			// 确定函数名称和选择器
-			var funcName string
-			var finalFuncSelector string
+
 			if isDirectCall {
 				// 直接调用，使用交易的函数选择器
 				funcName = "transfer"
@@ -830,22 +832,23 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 				finalFuncSelector = "nested_call" // 使用特殊标记表示嵌套调用
 			}
 
-			// 保存交易信息（为每个ERC20合约分别保存）
-			err = p.saveTransactionToDB(tx, receipt, block, contractAddress, finalFuncSelector, funcName)
-			if err != nil {
-				log.Error("Failed to save transaction to database",
-					"err", err,
-					"txHash", tx.Hash().Hex(),
-					"contract", contractAddress.Hex(),
-					"block", block.NumberU64())
-			} else {
-				log.Debug("Transaction saved to database",
-					"txHash", tx.Hash().Hex(),
-					"contract", contractAddress.Hex(),
-					"block", block.NumberU64(),
-					"funcName", funcName,
-					"isDirectCall", isDirectCall)
-			}
+		}
+
+		// 保存交易信息（为每个ERC20合约分别保存）
+		err = p.saveTransactionToDB(tx, receipt, block, *tx.To(), finalFuncSelector, funcName)
+		if err != nil {
+			log.Error("Failed to save transaction to database",
+				"err", err,
+				"txHash", tx.Hash().Hex(),
+				"contract", (*tx.To()).Hex(),
+				"block", block.NumberU64())
+		} else {
+			log.Debug("Transaction saved to database",
+				"txHash", tx.Hash().Hex(),
+				"contract", (*tx.To()).Hex(),
+				"block", block.NumberU64(),
+				"funcName", funcName,
+				"isDirectCall", isDirectCall)
 		}
 
 		// 保存每个Transfer事件并更新余额
