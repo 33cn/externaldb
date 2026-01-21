@@ -1223,6 +1223,26 @@ func (p *Process) saveTransactionToDB(tx *types.Transaction, receipt *types.Rece
 		txFee = new(big.Int).Mul(gasPrice, big.NewInt(int64(receipt.GasUsed)))
 	}
 
+	// 打印 funcSelector 用于调试
+	log.Debug("Saving transaction",
+		"txHash", tx.Hash().Hex(),
+		"funcSelector", funcSelector,
+		"funcSelectorLen", len(funcSelector),
+		"funcName", funcName,
+		"contract", contractAddress.Hex())
+
+	// 确保 funcSelector 不超过数据库字段长度限制
+	// 注意：数据库字段已修改为 VARCHAR(50)，但为了兼容性，这里仍然检查
+	finalFuncSelector := funcSelector
+	if len(funcSelector) > 50 {
+		log.Warn("funcSelector too long, truncating",
+			"original", funcSelector,
+			"length", len(funcSelector),
+			"txHash", tx.Hash().Hex())
+		// 截断到50个字符
+		finalFuncSelector = funcSelector[:50]
+	}
+
 	dbTx := &database.Transaction{
 		TxHash:          tx.Hash().Hex(),
 		BlockNumber:     block.NumberU64(),
@@ -1232,7 +1252,7 @@ func (p *Process) saveTransactionToDB(tx *types.Transaction, receipt *types.Rece
 		FromAddress:     normalizeAddress(fromAddr),
 		ToAddress:       normalizeAddress(toAddr),
 		ContractAddress: normalizeAddress(contractAddress.Hex()),
-		FuncSelector:    funcSelector,
+		FuncSelector:    finalFuncSelector,
 		FuncName:        funcName,
 		Value:           value,
 		GasLimit:        tx.Gas(),

@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     from_address VARCHAR(42) DEFAULT NULL COMMENT '发送者地址',
     to_address VARCHAR(42) DEFAULT NULL COMMENT '接收者地址(合约地址)',
     contract_address VARCHAR(42) NOT NULL COMMENT '合约地址(外键关联contracts表)',
-    func_selector VARCHAR(10) DEFAULT NULL COMMENT '函数选择器(4字节hex，外键关联function_signatures表)',
+    func_selector VARCHAR(50) DEFAULT NULL COMMENT '函数选择器(4字节hex或特殊标记如nested_call，外键关联function_signatures表)',
     func_name VARCHAR(50) DEFAULT NULL COMMENT '函数名称(transfer/transferFrom/approve等)',
     value DECIMAL(65,0) DEFAULT NULL COMMENT '交易金额(原始值，不考虑decimals)',
     gas_limit BIGINT UNSIGNED DEFAULT NULL COMMENT 'Gas限制',
@@ -83,7 +83,9 @@ CREATE TABLE IF NOT EXISTS transactions (
     KEY idx_func_selector (func_selector),
     KEY idx_status (status),
     CONSTRAINT fk_tx_contract FOREIGN KEY (contract_address) REFERENCES contracts(contract_address) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_tx_func_selector FOREIGN KEY (func_selector) REFERENCES function_signatures(selector) ON DELETE SET NULL ON UPDATE CASCADE
+    -- 注意：func_selector 外键约束已移除，因为需要支持特殊标记（如 "nested_call"）
+    -- 这些特殊标记不在 function_signatures 表中
+    -- CONSTRAINT fk_tx_func_selector FOREIGN KEY (func_selector) REFERENCES function_signatures(selector) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='交易表';
 
 -- 3. 地址持有代币余额表 (token_balances)
