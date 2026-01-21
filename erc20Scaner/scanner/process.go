@@ -264,17 +264,19 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 	// 回滚时会对不上
 	if len(detail.Block.Txs) != block.Transactions().Len() {
 		log.Warn("Block txs length mismatch, skipping",
-			"seqHash", blockSeq.Hash,
+			"seq-seq", blockSeq.SyncSeq,
+			"seq-type", blockSeq.Type,
+			"seq-hash", blockSeq.Hash,
 			"blockHash", block.Hash().Hex(),
-			"height", detail.Block.Height,
-			"txCount", len(detail.Block.Txs),
+			"seq-height", detail.Block.Height,
+			"seq-txCount", len(detail.Block.Txs),
 			"blockTxCount", block.Transactions().Len(),
 		)
 		for index, tx := range detail.Block.Txs {
-			log.Debug("Block tx", "tx", hexutil.Encode(tx.Hash()), "txIndex", index)
+			log.Debug("seq-Block tx", "tx", hexutil.Encode(tx.Hash()), "txIndex", index)
 		}
 		for index, tx := range block.Transactions() {
-			log.Debug("Block tx", "tx", tx.Hash().Hex(), "txIndex", index)
+			log.Debug("seq-Block tx", "tx", tx.Hash().Hex(), "txIndex", index)
 		}
 		return nil // 跳过不处理
 	}
@@ -306,13 +308,21 @@ func (p *Process) handleContractCreation(tx *types.Transaction, receipt *types.R
 	// 检查是否为ERC20合约
 	isERC20, err := p.checkERC20BySelector(&receipt.ContractAddress)
 	if err != nil {
-		return fmt.Errorf("checkERC20BySelector failed: %w", err)
-	}
-	if !isERC20 {
-		return nil // 不是ERC20合约，跳过
+		log.Warn("Failed to check ERC20 selector, saving as UNKNOWN contract",
+			"err", err,
+			"contract", receipt.ContractAddress.Hex())
+		// 检查失败，保存为UNKNOWN类型
+		return p.saveNonERC20ContractToDB(receipt, block, tx, "UNKNOWN")
 	}
 
-	// 获取合约信息
+	if !isERC20 {
+		// 不是ERC20合约，保存为UNKNOWN类型
+		log.Info("Contract is not ERC20, saving as UNKNOWN",
+			"contract", receipt.ContractAddress.Hex())
+		return p.saveNonERC20ContractToDB(receipt, block, tx, "UNKNOWN")
+	}
+
+	// 是ERC20合约，获取合约信息
 	decimals, err := p.unPackageAbi("decimals", &receipt.ContractAddress)
 	if err != nil {
 		return err
@@ -424,24 +434,7 @@ func (p *Process) processContractCreation(tx *types.Transaction, receipt *types.
 		return fmt.Errorf("contract address is empty")
 	}
 
-	// 先检查函数选择器，确认是否为ERC20合约
-	isERC20, err := p.checkERC20BySelector(&receipt.ContractAddress)
-	if err != nil {
-		log.Warn("Failed to check ERC20 selector",
-			"err", err,
-			"contract", receipt.ContractAddress.Hex())
-		// 如果检查失败，跳过该合约
-		return nil
-	}
-	if !isERC20 {
-		log.Debug("Contract is not ERC20, skipping",
-			"contract", receipt.ContractAddress.Hex())
-		return nil
-	}
-	log.Debug("Contract passed ERC20 selector check",
-		"contract", receipt.ContractAddress.Hex())
-
-	// 使用统一的处理函数
+	// 使用统一的处理函数，handleContractCreation 内部会判断是否为ERC20并保存
 	return p.handleContractCreation(tx, receipt, block)
 }
 
@@ -766,15 +759,33 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 				// 验证是否为ERC20合约
 				isERC20, err := p.checkERC20BySelector(&contractAddress)
 				if err != nil {
-					log.Warn("Failed to verify ERC20 contract",
+					log.Warn("Failed to verify ERC20 contract, saving as UNKNOWN",
 						"err", err,
 						"contract", contractAddress.Hex())
-					// 即使验证失败，也继续处理transfer事件
+					// 验证失败，保存为UNKNOWN类型
+					err = p.saveNonERC20ContractInfoFromAddress(&contractAddress, block, "UNKNOWN")
+					if err != nil {
+						log.Error("Failed to save non-ERC20 contract info",
+							"err", err,
+							"contract", contractAddress.Hex())
+					} else {
+						log.Info("Non-ERC20 contract saved to database", "contract", contractAddress.Hex())
+					}
+					// 继续处理transfer事件
 					continue
 				} else if !isERC20 {
-					log.Warn("Contract is not ERC20, but has Transfer event, continuing",
+					log.Info("Contract is not ERC20, but has Transfer event, saving as UNKNOWN",
 						"contract", contractAddress.Hex())
-					// 虽然不是ERC20，但既然有Transfer事件，也继续处理
+					// 虽然不是ERC20，但既然有Transfer事件，保存为UNKNOWN类型
+					err = p.saveNonERC20ContractInfoFromAddress(&contractAddress, block, "UNKNOWN")
+					if err != nil {
+						log.Error("Failed to save non-ERC20 contract info",
+							"err", err,
+							"contract", contractAddress.Hex())
+					} else {
+						log.Info("Non-ERC20 contract saved to database", "contract", contractAddress.Hex())
+					}
+					// 继续处理transfer事件
 					continue
 				} else {
 					// 是ERC20合约，获取合约信息并保存
@@ -1110,6 +1121,63 @@ func (p *Process) saveContractInfoFromAddress(contractAddress *common.Address, b
 		DeployerAddress:    "",                                // 未知
 		VerificationStatus: 1,
 		VerifiedFunctions:  string(verifiedFuncsJSON),
+	}
+
+	return p.db.SaveContract(contract)
+}
+
+// saveNonERC20ContractToDB 保存非ERC20合约信息到数据库（从部署交易）
+func (p *Process) saveNonERC20ContractToDB(receipt *types.Receipt, block *types.Block, tx *types.Transaction, contractType string) error {
+	if p.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	// 尝试获取发送者地址
+	var deployerAddr string
+	if tx.ChainId() != nil {
+		signer := types.NewEIP155Signer(tx.ChainId())
+		if sender, err := types.Sender(signer, tx); err == nil {
+			deployerAddr = sender.Hex()
+		}
+	}
+
+	contract := &database.Contract{
+		ContractAddress:    normalizeAddress(receipt.ContractAddress.Hex()),
+		ContractName:       "Unknown",
+		ContractSymbol:     "UNKNOWN",
+		ContractType:       contractType,
+		Decimals:           0, // 非ERC20合约没有decimals
+		TotalSupply:        big.NewInt(0),
+		DeployTxHash:       tx.Hash().Hex(),
+		DeployBlockNumber:  block.NumberU64(),
+		DeployBlockTime:    time.Unix(int64(block.Time()), 0),
+		DeployerAddress:    normalizeAddress(deployerAddr),
+		VerificationStatus: 0,    // 未验证
+		VerifiedFunctions:  "[]", // 空数组
+	}
+
+	return p.db.SaveContract(contract)
+}
+
+// saveNonERC20ContractInfoFromAddress 保存非ERC20合约信息到数据库（从地址查询）
+func (p *Process) saveNonERC20ContractInfoFromAddress(contractAddress *common.Address, block *types.Block, contractType string) error {
+	if p.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	contract := &database.Contract{
+		ContractAddress:    normalizeAddress(contractAddress.Hex()),
+		ContractName:       "Unknown",
+		ContractSymbol:     "UNKNOWN",
+		ContractType:       contractType,
+		Decimals:           0, // 非ERC20合约没有decimals
+		TotalSupply:        big.NewInt(0),
+		DeployTxHash:       "",                                // 未知，因为不是从部署交易中发现的
+		DeployBlockNumber:  0,                                 // 未知
+		DeployBlockTime:    time.Unix(int64(block.Time()), 0), // 使用当前区块时间作为参考
+		DeployerAddress:    "",                                // 未知
+		VerificationStatus: 0,                                 // 未验证
+		VerifiedFunctions:  "[]",                              // 空数组
 	}
 
 	return p.db.SaveContract(contract)
