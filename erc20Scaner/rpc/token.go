@@ -286,6 +286,24 @@ func handleTokenTransfers(w http.ResponseWriter, r *http.Request, tokenAddress s
 		transfers = append(transfers, record)
 	}
 
+	// 获取总数（用于分页）
+	countQuery := `SELECT COUNT(*) FROM events e WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
+	countArgs := []interface{}{tokenAddress}
+	if fromAddr != "" {
+		countQuery += " AND LOWER(e.from_address) = ?"
+		countArgs = append(countArgs, fromAddr)
+	}
+	if toAddr != "" {
+		countQuery += " AND LOWER(e.to_address) = ?"
+		countArgs = append(countArgs, toAddr)
+	}
+
+	var total int
+	err = db.GetConn().QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		total = len(transfers) // 如果查询总数失败，使用当前返回的数量
+	}
+
 	writeJSON(w, http.StatusOK, APIResponse{
 		Code:    0,
 		Message: "Success",
@@ -293,6 +311,7 @@ func handleTokenTransfers(w http.ResponseWriter, r *http.Request, tokenAddress s
 			"transfers": transfers,
 			"page":      page,
 			"size":      size,
+			"total":     total,
 		},
 	})
 }

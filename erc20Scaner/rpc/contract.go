@@ -128,6 +128,20 @@ func handleContractList(w http.ResponseWriter, r *http.Request) {
 		contracts = append(contracts, item)
 	}
 
+	// 获取总数（用于分页）
+	countQuery := `SELECT COUNT(*) FROM contracts WHERE 1=1`
+	countArgs := []interface{}{}
+	if symbol != "" {
+		countQuery += " AND contract_symbol LIKE ?"
+		countArgs = append(countArgs, "%"+symbol+"%")
+	}
+
+	var total int
+	err = db.GetConn().QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		total = len(contracts) // 如果查询总数失败，使用当前返回的数量
+	}
+
 	writeJSON(w, http.StatusOK, APIResponse{
 		Code:    0,
 		Message: "Success",
@@ -135,7 +149,7 @@ func handleContractList(w http.ResponseWriter, r *http.Request) {
 			"contracts": contracts,
 			"page":      page,
 			"size":      size,
-			"total":     len(contracts),
+			"total":     total,
 		},
 	})
 }
@@ -268,6 +282,24 @@ func handleContractTransfers(w http.ResponseWriter, r *http.Request, contractAdd
 		transfers = append(transfers, record)
 	}
 
+	// 获取总数（用于分页）
+	countQuery := `SELECT COUNT(*) FROM events e WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
+	countArgs := []interface{}{contractAddress}
+	if fromAddr != "" {
+		countQuery += " AND LOWER(e.from_address) = ?"
+		countArgs = append(countArgs, fromAddr)
+	}
+	if toAddr != "" {
+		countQuery += " AND LOWER(e.to_address) = ?"
+		countArgs = append(countArgs, toAddr)
+	}
+
+	var total int
+	err = db.GetConn().QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		total = len(transfers) // 如果查询总数失败，使用当前返回的数量
+	}
+
 	writeJSON(w, http.StatusOK, APIResponse{
 		Code:    0,
 		Message: "Success",
@@ -275,6 +307,7 @@ func handleContractTransfers(w http.ResponseWriter, r *http.Request, contractAdd
 			"transfers": transfers,
 			"page":      page,
 			"size":      size,
+			"total":     total,
 		},
 	})
 }
@@ -356,6 +389,20 @@ func handleContractTransactions(w http.ResponseWriter, r *http.Request, contract
 		transactions = append(transactions, record)
 	}
 
+	// 获取总数（用于分页）
+	countQuery := `SELECT COUNT(*) FROM transactions t WHERE LOWER(t.contract_address) = ?`
+	countArgs := []interface{}{contractAddress}
+	if funcName != "" {
+		countQuery += " AND t.func_name = ?"
+		countArgs = append(countArgs, funcName)
+	}
+
+	var total int
+	err = db.GetConn().QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		total = len(transactions) // 如果查询总数失败，使用当前返回的数量
+	}
+
 	writeJSON(w, http.StatusOK, APIResponse{
 		Code:    0,
 		Message: "Success",
@@ -363,6 +410,7 @@ func handleContractTransactions(w http.ResponseWriter, r *http.Request, contract
 			"transactions": transactions,
 			"page":         page,
 			"size":         size,
+			"total":        total,
 		},
 	})
 }
@@ -438,6 +486,20 @@ func handleContractHolders(w http.ResponseWriter, r *http.Request, contractAddre
 		holders = append(holders, holder)
 	}
 
+	// 获取总数（用于分页）
+	countQuery := `SELECT COUNT(*) FROM token_balances tb WHERE tb.contract_address = ?`
+	countArgs := []interface{}{contractAddress}
+	if minBalanceStr != "" {
+		countQuery += " AND tb.balance >= ?"
+		countArgs = append(countArgs, minBalanceStr)
+	}
+
+	var total int
+	err = db.GetConn().QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		total = len(holders) // 如果查询总数失败，使用当前返回的数量
+	}
+
 	writeJSON(w, http.StatusOK, APIResponse{
 		Code:    0,
 		Message: "Success",
@@ -445,6 +507,7 @@ func handleContractHolders(w http.ResponseWriter, r *http.Request, contractAddre
 			"holders": holders,
 			"page":    page,
 			"size":    size,
+			"total":   total,
 		},
 	})
 }
@@ -541,6 +604,27 @@ func handleHolderTransfers(w http.ResponseWriter, r *http.Request, contractAddre
 		transfers = append(transfers, record)
 	}
 
+	// 获取总数（用于分页）
+	countQuery := `SELECT COUNT(*) FROM events e WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
+	countArgs := []interface{}{contractAddress}
+	switch role {
+	case "from":
+		countQuery += " AND LOWER(e.from_address) = ?"
+		countArgs = append(countArgs, holderAddress)
+	case "to":
+		countQuery += " AND LOWER(e.to_address) = ?"
+		countArgs = append(countArgs, holderAddress)
+	case "both":
+		countQuery += " AND (LOWER(e.from_address) = ? OR LOWER(e.to_address) = ?)"
+		countArgs = append(countArgs, holderAddress, holderAddress)
+	}
+
+	var total int
+	err = db.GetConn().QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		total = len(transfers) // 如果查询总数失败，使用当前返回的数量
+	}
+
 	writeJSON(w, http.StatusOK, APIResponse{
 		Code:    0,
 		Message: "Success",
@@ -548,6 +632,7 @@ func handleHolderTransfers(w http.ResponseWriter, r *http.Request, contractAddre
 			"transfers": transfers,
 			"page":      page,
 			"size":      size,
+			"total":     total,
 		},
 	})
 }
@@ -656,6 +741,31 @@ func handleHolderTransactions(w http.ResponseWriter, r *http.Request, contractAd
 		transactions = append(transactions, record)
 	}
 
+	// 获取总数（用于分页）
+	countQuery := `SELECT COUNT(*) FROM transactions t WHERE LOWER(t.contract_address) = ?`
+	countArgs := []interface{}{contractAddress}
+	switch role {
+	case "from":
+		countQuery += " AND LOWER(t.from_address) = ?"
+		countArgs = append(countArgs, holderAddress)
+	case "to":
+		countQuery += " AND LOWER(t.to_address) = ?"
+		countArgs = append(countArgs, holderAddress)
+	case "both":
+		countQuery += " AND (LOWER(t.from_address) = ? OR LOWER(t.to_address) = ?)"
+		countArgs = append(countArgs, holderAddress, holderAddress)
+	}
+	if funcName != "" {
+		countQuery += " AND t.func_name = ?"
+		countArgs = append(countArgs, funcName)
+	}
+
+	var total int
+	err = db.GetConn().QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		total = len(transactions) // 如果查询总数失败，使用当前返回的数量
+	}
+
 	writeJSON(w, http.StatusOK, APIResponse{
 		Code:    0,
 		Message: "Success",
@@ -663,6 +773,7 @@ func handleHolderTransactions(w http.ResponseWriter, r *http.Request, contractAd
 			"transactions": transactions,
 			"page":         page,
 			"size":         size,
+			"total":        total,
 		},
 	})
 }
