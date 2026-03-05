@@ -48,10 +48,12 @@ func formatTokenAmount(amount *big.Int, decimals uint8) string {
 		return quotient.String()
 	}
 
-	// 处理小数部分
+	// 处理小数部分：remainder/divisor 在 (0,1)，Text('f', decimals) 得到 "0.xxx"
 	remainderFloat := new(big.Float).Quo(new(big.Float).SetInt(remainder), new(big.Float).SetInt(divisor))
 	remainderStr := remainderFloat.Text('f', int(decimals))
 	remainderStr = strings.TrimRight(strings.TrimRight(remainderStr, "0"), ".")
+	// 去掉前导 "0."，避免拼接后出现 "23955.0.949..."
+	remainderStr = strings.TrimPrefix(remainderStr, "0.")
 
 	if remainderStr == "" || remainderStr == "0" {
 		return quotient.String()
