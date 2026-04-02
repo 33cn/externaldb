@@ -632,6 +632,10 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 	}
 	var transfers []TransferWithLogIndex
 	for logIndex, log := range receipt.Logs {
+		// 跳过已移除的日志
+		if log.Removed {
+			continue
+		}
 		// 检查日志主题是否匹配Transfer事件（第一个topic是事件签名hash）
 		if len(log.Topics) < 3 {
 			continue
