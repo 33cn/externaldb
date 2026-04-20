@@ -397,6 +397,78 @@ func (db *DB) UpdateTokenBalance(address, contractAddress string, balance *big.I
 	return err
 }
 
+// TokenBalanceRowKey (address, contract) 用于后台刷新任务选批
+type TokenBalanceRowKey struct {
+	Address         string
+	ContractAddress string
+}
+
+// ListTokenBalanceRowsForRefresh 选取待刷新行：仅 ERC20，按 last_updated_at 最旧优先
+func (db *DB) ListTokenBalanceRowsForRefresh(limit int, minAge time.Duration) ([]TokenBalanceRowKey, error) {
+	var query string
+	var args []interface{}
+	if minAge <= 0 {
+		query = `
+			SELECT tb.address, tb.contract_address
+			FROM token_balances tb
+			INNER JOIN contracts c ON tb.contract_address = c.contract_address
+			WHERE c.contract_type = 'ERC20'
+			ORDER BY tb.last_updated_at ASC
+			LIMIT ?`
+		args = []interface{}{limit}
+	} else {
+		cutoff := time.Now().Add(-minAge)
+		query = `
+			SELECT tb.address, tb.contract_address
+			FROM token_balances tb
+			INNER JOIN contracts c ON tb.contract_address = c.contract_address
+			WHERE c.contract_type = 'ERC20'
+			  AND tb.last_updated_at < ?
+			ORDER BY tb.last_updated_at ASC
+			LIMIT ?`
+		args = []interface{}{cutoff, limit}
+	}
+	rows, err := db.conn.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []TokenBalanceRowKey
+	for rows.Next() {
+		var k TokenBalanceRowKey
+		if err := rows.Scan(&k.Address, &k.ContractAddress); err != nil {
+			return nil, err
+		}
+		out = append(out, k)
+	}
+	return out, rows.Err()
+}
+
+// UpdateTokenBalanceFromChain 仅更新链上查询得到的余额与 last_updated_at，不修改 last_tx_*
+func (db *DB) UpdateTokenBalanceFromChain(address, contractAddress string, balance *big.Int) error {
+	if balance == nil {
+		balance = big.NewInt(0)
+	}
+	q := `UPDATE token_balances SET balance = ?, last_updated_at = CURRENT_TIMESTAMP
+		WHERE address = ? AND contract_address = ?`
+	_, err := db.conn.Exec(q, balance.String(), address, contractAddress)
+	return err
+}
+
+// UpsertTokenBalanceMetadata 插入新行 balance=0，或已存在时仅更新最后交易元数据（不覆盖已有 balance）
+func (db *DB) UpsertTokenBalanceMetadata(address, contractAddress, txHash string, blockNumber uint64) error {
+	q := `INSERT INTO token_balances (
+			address, contract_address, balance, last_tx_hash, last_tx_block_number
+		) VALUES (?, ?, '0', ?, ?)
+		ON DUPLICATE KEY UPDATE
+			last_tx_hash = VALUES(last_tx_hash),
+			last_tx_block_number = VALUES(last_tx_block_number),
+			last_updated_at = CURRENT_TIMESTAMP`
+	_, err := db.conn.Exec(q, address, contractAddress, txHash, blockNumber)
+	return err
+}
+
 // SaveEvent 保存事件信息
 func (db *DB) SaveEvent(event *Event) error {
 	query := `INSERT INTO events (

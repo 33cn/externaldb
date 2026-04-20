@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"sync"
+	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -17,6 +20,7 @@ import (
 
 	chain33types "github.com/33cn/chain33/types"
 	"github.com/33cn/externaldb/db/block"
+	"github.com/33cn/externaldb/erc20Scaner/config"
 	"github.com/33cn/externaldb/erc20Scaner/database"
 	"github.com/33cn/externaldb/erc20Scaner/erc20abi/generated"
 	"github.com/33cn/externaldb/escli"
@@ -45,6 +49,11 @@ type Process struct {
 	db         *database.DB
 	nodeURL    string
 	esClient   escli.ESClient // ES客户端，用于从ES读取区块
+
+	skipInlineBalanceUpdate bool // 为 true 时不扫块内联 balanceOf，依赖占位行 + balance_refresher
+
+	// esResumeHeight：已处理完成的链上区块高度（用于 ES 模式 seq/height 对齐，仅 ES 路径使用）
+	esResumeHeight uint64
 }
 
 // Init 初始化模块
@@ -80,9 +89,66 @@ func (p *Process) Init() {
 	}
 }
 
+// esSeqHeightSmallDrift 当 |SyncSeq-height| < 该值时，高度与期望不一致也直接处理本轮（避免反复对齐）
+const esSeqHeightSmallDrift = 100
+
+// alignESScanStart 解决：进度存的是 block height，而 ES 文档 id 为 sync_seq（通常 seq>=height；回滚后 seq 会继续增加）。
+// 探测一次 seq=lastH+1 的文档，取 d = SyncSeq - height，将下一条 ES 键设为 (lastH+1)+d，与链上下一块高度对齐。
+func (p *Process) alignESScanStart() {
+	if !p.enableDB || p.db == nil {
+		if p.startPoint > 0 {
+			p.esResumeHeight = p.startPoint - 1
+		}
+		return
+	}
+	progress, err := p.db.GetScanProgress()
+	if err != nil {
+		log.Warn("ES align: get scan progress", "err", err)
+		if p.startPoint > 0 {
+			p.esResumeHeight = p.startPoint - 1
+		}
+		return
+	}
+	if progress == nil || progress.LastBlockNumber == 0 {
+		if p.startPoint > 0 {
+			p.esResumeHeight = p.startPoint - 1
+		}
+		return
+	}
+	lastH := progress.LastBlockNumber
+	p.esResumeHeight = lastH
+
+	probe, err := p.getBlockFromES(int64(lastH + 1))
+	if err != nil {
+		log.Warn("ES align: probe getBlockFromES failed", "err", err, "probeSeqAsHeight", lastH+1)
+		return
+	}
+	if probe == nil {
+		log.Warn("ES align: probe document missing", "probeSeqAsHeight", lastH+1)
+		return
+	}
+	var detail chain33types.BlockDetail
+	if err := chain33types.Decode(probe.BlockDetail, &detail); err != nil {
+		log.Warn("ES align: decode probe BlockDetail", "err", err)
+		return
+	}
+	H := int64(detail.Block.Height)
+	S := int64(probe.SyncSeq)
+	delta := S - H
+	// 下一块链高 lastH+1 对应的 ES 键约为 (lastH+1) + delta
+	p.startPoint = uint64(int64(lastH+1) + delta)
+	log.Info("ES scan start aligned",
+		"lastBlockHeight", lastH,
+		"probeSyncSeq", S,
+		"probeHeight", H,
+		"delta_seq_minus_height", delta,
+		"nextESSeq", p.startPoint)
+}
+
 // StartWithEsClient 从ES读取区块并处理evm交易
 func (p *Process) StartWithEsClient(esClient escli.ESClient) {
 	p.esClient = esClient
+	p.alignESScanStart()
 	for {
 		// 检查是否到达结束点
 		if p.endPoint > 0 && p.startPoint >= uint64(p.endPoint) {
@@ -104,7 +170,41 @@ func (p *Process) StartWithEsClient(esClient escli.ESClient) {
 			continue
 		}
 
-		// 解析区块
+		var detail chain33types.BlockDetail
+		if err := chain33types.Decode(blockSeq.BlockDetail, &detail); err != nil {
+			log.Error("Failed to decode BlockDetail from ES", "err", err, "seq", p.startPoint)
+			time.Sleep(time.Second)
+			continue
+		}
+		have := uint64(detail.Block.Height)
+		want := p.esResumeHeight + 1
+		delta := int64(blockSeq.SyncSeq) - int64(have)
+		absDelta := delta
+		if absDelta < 0 {
+			absDelta = -absDelta
+		}
+		if have != want {
+			// 期望的链上下一块高度为 want，当前文档内高度为 have；用同一 d=SyncSeq-height 逼近 want 对应的 ES 键
+			targetSeq := int64(want) + delta
+			if targetSeq < 0 {
+				log.Warn("ES seq align: negative targetSeq", "want", want, "have", have, "delta", delta)
+				time.Sleep(time.Second)
+				continue
+			}
+			if absDelta >= esSeqHeightSmallDrift {
+				log.Warn("ES seq/height mismatch, realigning",
+					"wantHeight", want, "haveHeight", have,
+					"syncSeq", blockSeq.SyncSeq, "delta_seq_minus_height", delta,
+					"nextESSeq", uint64(targetSeq))
+				p.startPoint = uint64(targetSeq)
+				continue
+			}
+			// |delta| 较小时直接按当前块处理，一般区块量小、很快可追上
+			log.Info("ES seq/height small drift, processing this seq anyway",
+				"wantHeight", want, "haveHeight", have,
+				"syncSeq", blockSeq.SyncSeq, "delta", delta)
+		}
+
 		err = p.parseBlockFromES(blockSeq)
 		if err != nil {
 			log.Error("Failed to parse block from ES", "err", err, "seq", p.startPoint)
@@ -112,26 +212,22 @@ func (p *Process) StartWithEsClient(esClient escli.ESClient) {
 			continue
 		}
 
-		// 更新处理进度
+		// 更新处理进度（存链上高度，非 ES 的 sync_seq）
 		if p.enableDB && p.db != nil {
-			// 从blockSeq中获取区块信息
-			var detail chain33types.BlockDetail
-			err = chain33types.Decode(blockSeq.BlockDetail, &detail)
-			if err == nil {
-				blockTime := time.Unix(int64(detail.Block.BlockTime), 0)
-				err = p.db.UpdateScanProgress(
-					uint64(detail.Block.Height),
-					blockSeq.Hash,
-					blockTime,
-					0, // processed_tx_count 可以根据需要统计
-				)
-				if err != nil {
-					log.Error("Failed to update scan progress", "err", err, "block", p.startPoint)
-				}
+			blockTime := time.Unix(int64(detail.Block.BlockTime), 0)
+			err = p.db.UpdateScanProgress(
+				have,
+				blockSeq.Hash,
+				blockTime,
+				0,
+			)
+			if err != nil {
+				log.Error("Failed to update scan progress", "err", err, "height", have)
 			}
 		}
-
-		p.startPoint++
+		p.esResumeHeight = have
+		// 游标按 sync_seq 递增，避免把「高度」当 ES 文档 id
+		p.startPoint = uint64(int64(blockSeq.SyncSeq) + 1)
 	}
 }
 
@@ -875,27 +971,42 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 					"token", transfer.TokenAddress.Hex())
 			}
 
-			// 更新发送者余额（减少）
-			fromBalance, err := p.getBalanceFromContract(&transfer.TokenAddress, &transfer.From)
-			if err == nil {
-				err = p.updateBalanceInDB(transfer.From, transfer.TokenAddress, fromBalance, tx.Hash(), block.NumberU64())
-				if err != nil {
-					log.Error("Failed to update from balance",
+			if p.skipInlineBalanceUpdate {
+				if err := p.touchBalanceRowInDB(transfer.From, transfer.TokenAddress, tx.Hash(), block.NumberU64()); err != nil {
+					log.Error("Failed to touch from balance row",
 						"err", err,
 						"address", transfer.From.Hex(),
 						"token", transfer.TokenAddress.Hex())
 				}
-			}
-
-			// 更新接收者余额（增加）
-			toBalance, err := p.getBalanceFromContract(&transfer.TokenAddress, &transfer.To)
-			if err == nil {
-				err = p.updateBalanceInDB(transfer.To, transfer.TokenAddress, toBalance, tx.Hash(), block.NumberU64())
-				if err != nil {
-					log.Error("Failed to update to balance",
+				if err := p.touchBalanceRowInDB(transfer.To, transfer.TokenAddress, tx.Hash(), block.NumberU64()); err != nil {
+					log.Error("Failed to touch to balance row",
 						"err", err,
 						"address", transfer.To.Hex(),
 						"token", transfer.TokenAddress.Hex())
+				}
+			} else {
+				// 更新发送者余额（减少）
+				fromBalance, err := p.getBalanceFromContract(&transfer.TokenAddress, &transfer.From)
+				if err == nil {
+					err = p.updateBalanceInDB(transfer.From, transfer.TokenAddress, fromBalance, tx.Hash(), block.NumberU64())
+					if err != nil {
+						log.Error("Failed to update from balance",
+							"err", err,
+							"address", transfer.From.Hex(),
+							"token", transfer.TokenAddress.Hex())
+					}
+				}
+
+				// 更新接收者余额（增加）
+				toBalance, err := p.getBalanceFromContract(&transfer.TokenAddress, &transfer.To)
+				if err == nil {
+					err = p.updateBalanceInDB(transfer.To, transfer.TokenAddress, toBalance, tx.Hash(), block.NumberU64())
+					if err != nil {
+						log.Error("Failed to update to balance",
+							"err", err,
+							"address", transfer.To.Hex(),
+							"token", transfer.TokenAddress.Hex())
+					}
 				}
 			}
 		}
@@ -1314,4 +1425,105 @@ func (p *Process) updateBalanceInDB(address, contractAddress common.Address, bal
 		txHash.Hex(),
 		blockNumber,
 	)
+}
+
+// touchBalanceRowInDB 在关闭扫块内联 balanceOf 时调用：若无行则插入 balance=0 与 last_tx_*；若已有行则只更新 last_tx_*（不覆盖 balance），真实余额由 runBalanceRefresher 写入。
+func (p *Process) touchBalanceRowInDB(address, contractAddress common.Address, txHash common.Hash, blockNumber uint64) error {
+	if p.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+	return p.db.UpsertTokenBalanceMetadata(
+		normalizeAddress(address.Hex()),
+		normalizeAddress(contractAddress.Hex()),
+		txHash.Hex(),
+		blockNumber,
+	)
+}
+
+// runBalanceRefresher 定时从链上 balanceOf 刷新 token_balances（仅更新 balance 与 last_updated_at）
+func (p *Process) runBalanceRefresher(ctx context.Context, br config.BalanceRefresherConfig) {
+	interval, minAge, err := br.ParseBalanceRefresherDurations()
+	if err != nil {
+		log.Error("balance_refresher: invalid duration config", "err", err)
+		return
+	}
+	batch := br.BatchSize
+	if batch <= 0 {
+		batch = 50
+	}
+	concurrency := br.Concurrency
+	if concurrency <= 0 {
+		concurrency = 5
+	}
+	log.Info("balance_refresher started",
+		"interval", interval.String(),
+		"batch_size", batch,
+		"concurrency", concurrency,
+		"min_age", minAge.String())
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("balance_refresher stopped")
+			return
+		case <-ticker.C:
+			p.refreshBalanceBatch(batch, minAge, concurrency)
+		}
+	}
+}
+
+func (p *Process) refreshBalanceBatch(batchSize int, minAge time.Duration, concurrency int) {
+	if p.db == nil {
+		return
+	}
+	rows, err := p.db.ListTokenBalanceRowsForRefresh(batchSize, minAge)
+	if err != nil {
+		log.Error("balance_refresher: list rows", "err", err)
+		return
+	}
+	if len(rows) == 0 {
+		return
+	}
+
+	var ok, fail atomic.Int64
+	sem := make(chan struct{}, concurrency)
+	var wg sync.WaitGroup
+	for _, row := range rows {
+		row := row
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			addr := common.HexToAddress(row.Address)
+			contract := common.HexToAddress(row.ContractAddress)
+			bal, err := p.getBalanceFromContract(&contract, &addr)
+			if err != nil {
+				fail.Add(1)
+				log.Debug("balance_refresher: balanceOf failed",
+					"err", err, "address", row.Address, "contract", row.ContractAddress)
+				return
+			}
+			err = p.db.UpdateTokenBalanceFromChain(
+				normalizeAddress(row.Address),
+				normalizeAddress(row.ContractAddress),
+				bal,
+			)
+			if err != nil {
+				fail.Add(1)
+				log.Error("balance_refresher: update db",
+					"err", err, "address", row.Address, "contract", row.ContractAddress)
+				return
+			}
+			ok.Add(1)
+		}()
+	}
+	wg.Wait()
+	log.Info("balance_refresher tick",
+		"rows", len(rows),
+		"ok", ok.Load(),
+		"fail", fail.Load())
 }

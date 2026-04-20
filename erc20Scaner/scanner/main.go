@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 
@@ -47,6 +48,7 @@ func initAndStart(cfg *config.Config) {
 	p.enableDB = cfg.Database.Enabled
 	p.dbDSN = cfg.Database.DSN
 	p.nodeURL = cfg.Node.URL
+	p.skipInlineBalanceUpdate = cfg.Scanner.SkipInlineBalanceUpdate
 
 	// 如果启用了ES模式，优先使用ES读取区块
 	if cfg.ES.Enabled {
@@ -58,12 +60,18 @@ func initAndStart(cfg *config.Config) {
 		}
 		log.Info("ES connection established successfully")
 		p.Init()
+		if cfg.Database.Enabled && cfg.BalanceRefresher.Enabled {
+			go p.runBalanceRefresher(context.Background(), cfg.BalanceRefresher)
+		}
 		defer p.Close()
 		p.StartWithEsClient(esClient)
 	} else {
 		// 使用节点模式
 		log.Info("Node mode enabled", "url", cfg.Node.URL)
 		p.Init()
+		if cfg.Database.Enabled && cfg.BalanceRefresher.Enabled {
+			go p.runBalanceRefresher(context.Background(), cfg.BalanceRefresher)
+		}
 		defer p.Close()
 		p.Start()
 	}
@@ -75,10 +83,19 @@ func logConfig(cfg *config.Config, log *slog.Logger) {
 		"startBlock", cfg.Scanner.StartBlock,
 		"endBlock", cfg.Scanner.EndBlock,
 		"dbEnabled", cfg.Database.Enabled,
-		"esEnabled", cfg.ES.Enabled)
+		"esEnabled", cfg.ES.Enabled,
+		"skipInlineBalanceUpdate", cfg.Scanner.SkipInlineBalanceUpdate,
+		"balanceRefresherEnabled", cfg.BalanceRefresher.Enabled)
 
 	if cfg.Database.Enabled {
 		log.Info("Database configuration", "dsn", logger.MaskDSN(cfg.Database.DSN))
+	}
+	if cfg.BalanceRefresher.Enabled {
+		log.Info("balance_refresher configuration",
+			"interval", cfg.BalanceRefresher.Interval,
+			"batch_size", cfg.BalanceRefresher.BatchSize,
+			"concurrency", cfg.BalanceRefresher.Concurrency,
+			"min_age", cfg.BalanceRefresher.MinAge)
 	}
 	if cfg.ES.Enabled {
 		log.Info("ES configuration",

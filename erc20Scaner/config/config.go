@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -15,8 +16,9 @@ type Config struct {
 	ES       ESConfig       `yaml:"es"`
 
 	// 应用程序配置
-	Scanner ScannerConfig `yaml:"scanner"`
-	RPC     RPCConfig     `yaml:"rpc"` // RPC 服务配置
+	Scanner          ScannerConfig          `yaml:"scanner"`
+	RPC              RPCConfig              `yaml:"rpc"` // RPC 服务配置
+	BalanceRefresher BalanceRefresherConfig `yaml:"balance_refresher"`
 
 	// 日志配置
 	Log LogConfig `yaml:"log"`
@@ -33,6 +35,37 @@ type NodeConfig struct {
 type ScannerConfig struct {
 	StartBlock int64 `yaml:"start_block"`
 	EndBlock   int64 `yaml:"end_block"`
+	// SkipInlineBalanceUpdate 为 true 时扫块不写链上 balanceOf，仅维护占位行并由 balance_refresher 刷新
+	SkipInlineBalanceUpdate bool `yaml:"skip_inline_balance_update"`
+}
+
+// BalanceRefresherConfig 地址代币余额后台刷新（链上 balanceOf）
+type BalanceRefresherConfig struct {
+	Enabled     bool   `yaml:"enabled"`
+	Interval    string `yaml:"interval"`     // 如 1h、30m；空则默认 1h
+	BatchSize   int    `yaml:"batch_size"`   // 每轮最多行数，<=0 则默认 50
+	Concurrency int    `yaml:"concurrency"`  // 并发 RPC 上限，<=0 则默认 5
+	MinAge      string `yaml:"min_age"`      // 只刷新超过该时间未更新的行，如 30s；空表示不限制
+}
+
+// ParseBalanceRefresherDurations 解析 Interval 与 MinAge，供扫描器使用
+func (b BalanceRefresherConfig) ParseBalanceRefresherDurations() (interval, minAge time.Duration, err error) {
+	intervalStr := b.Interval
+	if intervalStr == "" {
+		intervalStr = "1h"
+	}
+	interval, err = time.ParseDuration(intervalStr)
+	if err != nil {
+		return 0, 0, fmt.Errorf("balance_refresher.interval: %w", err)
+	}
+	if b.MinAge == "" {
+		return interval, 0, nil
+	}
+	minAge, err = time.ParseDuration(b.MinAge)
+	if err != nil {
+		return 0, 0, fmt.Errorf("balance_refresher.min_age: %w", err)
+	}
+	return interval, minAge, nil
 }
 
 // RPCConfig RPC 服务配置
@@ -94,8 +127,16 @@ func GetDefaultConfig() *Config {
 			Symbol: "bty",
 		},
 		Scanner: ScannerConfig{
-			StartBlock: 42399544,
-			EndBlock:   -1,
+			StartBlock:              42399544,
+			EndBlock:                -1,
+			SkipInlineBalanceUpdate: false,
+		},
+		BalanceRefresher: BalanceRefresherConfig{
+			Enabled:     false,
+			Interval:    "1h",
+			BatchSize:   50,
+			Concurrency: 5,
+			MinAge:      "",
 		},
 		RPC: RPCConfig{
 			Port: "8080",
