@@ -20,6 +20,16 @@ es:
 scanner:
   start_block: 42399544
   end_block: -1
+  # 为 true 时扫块不对 from/to 调链上 balanceOf，仅写入/更新 token_balances 占位行，余额由 balance_refresher 刷新（建议同时启用 balance_refresher）
+  skip_inline_balance_update: false
+
+# 定时用链上 balanceOf 校准 token_balances（仅更新 balance 与 last_updated_at，不覆盖 last_tx_*）
+balance_refresher:
+  enabled: false
+  interval: "1h"       # 调度周期，如 30m、1h；未配置时程序默认亦为 1h
+  batch_size: 50       # 每轮最多刷新行数，<=0 时默认 50
+  concurrency: 5         # 并发 RPC 上限，<=0 时默认 5
+  min_age: ""            # 可选，如 "30s"：只刷新超过该时间未更新的行；空字符串表示不限制
 
 rpc:
   port: "8080"
