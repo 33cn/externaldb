@@ -74,6 +74,8 @@ func main() {
 	http.HandleFunc("/evmapi/tokens", handleTokensRouter)
 	http.HandleFunc("/evmapi/tokens/", handleTokensRouter)
 	http.HandleFunc("/evmapi/transactions/", handleTransactionsRouter)
+	http.HandleFunc("/evmapi/accounts", handleAccountsRouter)
+	http.HandleFunc("/evmapi/accounts/", handleAccountsRouter)
 	http.HandleFunc("/health", handleHealth)
 
 	// 启动服务器

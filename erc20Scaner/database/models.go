@@ -79,6 +79,18 @@ type TokenBalance struct {
 	CreatedAt         time.Time  `db:"created_at"`
 }
 
+// AccountERC20BalanceRow 某用户地址持有的一笔 ERC20（token_balances JOIN contracts，仅 contract_type=ERC20）
+type AccountERC20BalanceRow struct {
+	ContractAddress string
+	ContractName    string
+	ContractSymbol  string
+	Decimals        uint8
+	Balance         *big.Int
+	LastTxHash      string
+	LastTxBlock     uint64
+	LastUpdatedAt   time.Time
+}
+
 // Event 事件模型
 type Event struct {
 	ID              uint64     `db:"id"`
@@ -608,6 +620,73 @@ func (db *DB) GetTokenBalancesByAddress(address string) ([]TokenBalance, error) 
 	}
 
 	return balances, nil
+}
+
+// ListERC20BalancesByHolderAddress 分页查询某地址持有的 ERC20 代币及余额（仅 contracts 中标记为 ERC20 的合约）
+func (db *DB) ListERC20BalancesByHolderAddress(holder string, minBalance string, limit, offset int) ([]AccountERC20BalanceRow, int, error) {
+	baseWhere := `FROM token_balances tb
+		INNER JOIN contracts c ON LOWER(tb.contract_address) = LOWER(c.contract_address)
+		WHERE LOWER(tb.address) = LOWER(?) AND c.contract_type = 'ERC20'`
+	args := []interface{}{holder}
+	if minBalance != "" {
+		baseWhere += ` AND tb.balance >= ?`
+		args = append(args, minBalance)
+	}
+
+	countQuery := `SELECT COUNT(*) ` + baseWhere
+	var total int
+	if err := db.conn.QueryRow(countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	listQuery := `SELECT tb.contract_address,
+		COALESCE(c.contract_name, ''),
+		COALESCE(c.contract_symbol, ''),
+		c.decimals,
+		tb.balance,
+		tb.last_tx_hash,
+		tb.last_tx_block_number,
+		tb.last_updated_at ` + baseWhere + `
+		ORDER BY tb.balance DESC LIMIT ? OFFSET ?`
+	listArgs := append(append([]interface{}(nil), args...), limit, offset)
+
+	rows, err := db.conn.Query(listQuery, listArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var out []AccountERC20BalanceRow
+	for rows.Next() {
+		var row AccountERC20BalanceRow
+		var balStr sql.NullString
+		if err := rows.Scan(
+			&row.ContractAddress,
+			&row.ContractName,
+			&row.ContractSymbol,
+			&row.Decimals,
+			&balStr,
+			&row.LastTxHash,
+			&row.LastTxBlock,
+			&row.LastUpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		if balStr.Valid && balStr.String != "" {
+			v, ok := new(big.Int).SetString(balStr.String, 10)
+			if ok {
+				row.Balance = v
+			}
+		}
+		if row.Balance == nil {
+			row.Balance = big.NewInt(0)
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	return out, total, nil
 }
 
 // GetEventsByContract 获取合约的所有事件

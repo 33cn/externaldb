@@ -76,3 +76,16 @@ type HolderInfo struct {
 	LastUpdated      time.Time `json:"last_updated"`
 }
 
+// AccountERC20TokenBalance 某地址持有的一笔 ERC20（按地址查询持仓列表项）
+type AccountERC20TokenBalance struct {
+	ContractAddress  string    `json:"contract_address"`
+	Name               string    `json:"name"`
+	Symbol             string    `json:"symbol"`
+	Decimals           uint8     `json:"decimals"`
+	Balance            string    `json:"balance"`
+	BalanceFormatted   string    `json:"balance_formatted"`
+	LastTxHash         string    `json:"last_tx_hash"`
+	LastTxBlock        uint64    `json:"last_tx_block"`
+	LastUpdated        time.Time `json:"last_updated"`
+}
+
