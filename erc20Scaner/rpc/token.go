@@ -233,21 +233,21 @@ func handleTokenTransfers(w http.ResponseWriter, r *http.Request, tokenAddress s
 		toAddr = normalizeAddress(toAddr)
 	}
 
-	// 构建查询（使用LOWER()确保大小写不敏感的比较）
+	// 构建查询
+	// 地址在入库和入参阶段都已统一成小写，且字段使用 *_ci 排序规则，不需要对列做 LOWER()，
+	// 这样可以命中索引，避免大表时出现明显慢查询。
 	offset := (page - 1) * size
-	query := `SELECT e.tx_hash, e.block_number, e.block_time, e.from_address, e.to_address, 
-	          e.value, c.contract_symbol, c.decimals
+	query := `SELECT e.tx_hash, e.block_number, e.block_time, e.from_address, e.to_address, e.value
 	          FROM events e
-	          LEFT JOIN contracts c ON LOWER(e.contract_address) = LOWER(c.contract_address)
-	          WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
+	          WHERE e.contract_address = ? AND e.event_name = 'Transfer'`
 	args := []interface{}{tokenAddress}
 
 	if fromAddr != "" {
-		query += " AND LOWER(e.from_address) = ?"
+		query += " AND e.from_address = ?"
 		args = append(args, fromAddr)
 	}
 	if toAddr != "" {
-		query += " AND LOWER(e.to_address) = ?"
+		query += " AND e.to_address = ?"
 		args = append(args, toAddr)
 	}
 
@@ -272,8 +272,6 @@ func handleTokenTransfers(w http.ResponseWriter, r *http.Request, tokenAddress s
 			&record.From,
 			&record.To,
 			&valueStr,
-			&record.TokenSymbol,
-			&record.TokenDecimals,
 		)
 		if err != nil {
 			continue
@@ -281,20 +279,22 @@ func handleTokenTransfers(w http.ResponseWriter, r *http.Request, tokenAddress s
 
 		value, _ := new(big.Int).SetString(valueStr, 10)
 		record.Value = valueStr
+		record.TokenSymbol = contract.ContractSymbol
+		record.TokenDecimals = contract.Decimals
 		record.ValueFormatted = formatTokenAmount(value, record.TokenDecimals)
 
 		transfers = append(transfers, record)
 	}
 
 	// 获取总数（用于分页）
-	countQuery := `SELECT COUNT(*) FROM events e WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
+	countQuery := `SELECT COUNT(*) FROM events e WHERE e.contract_address = ? AND e.event_name = 'Transfer'`
 	countArgs := []interface{}{tokenAddress}
 	if fromAddr != "" {
-		countQuery += " AND LOWER(e.from_address) = ?"
+		countQuery += " AND e.from_address = ?"
 		countArgs = append(countArgs, fromAddr)
 	}
 	if toAddr != "" {
-		countQuery += " AND LOWER(e.to_address) = ?"
+		countQuery += " AND e.to_address = ?"
 		countArgs = append(countArgs, toAddr)
 	}
 
