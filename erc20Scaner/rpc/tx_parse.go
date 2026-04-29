@@ -292,8 +292,8 @@ func getTransferLogsFromDB(evmHash string) ([]EvmEvent, error) {
 	query := `SELECT e.tx_hash, e.block_number, e.block_time, e.from_address, e.to_address, 
 	          e.value, c.contract_symbol, c.decimals, e.contract_address
 	          FROM events e
-	          LEFT JOIN contracts c ON LOWER(e.contract_address) = LOWER(c.contract_address)
-	          WHERE LOWER(e.tx_hash) = LOWER(?) AND e.event_name = 'Transfer'
+	          LEFT JOIN contracts c ON e.contract_address = c.contract_address
+	          WHERE e.tx_hash = ? AND e.event_name = 'Transfer'
 	          ORDER BY e.log_index ASC`
 
 	rows, err := db.GetConn().Query(query, evmHash)

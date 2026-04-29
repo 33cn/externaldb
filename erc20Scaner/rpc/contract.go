@@ -229,21 +229,22 @@ func handleContractTransfers(w http.ResponseWriter, r *http.Request, contractAdd
 		toAddr = normalizeAddress(toAddr)
 	}
 
-	// 构建查询（使用LOWER()确保大小写不敏感的比较）
+	// 构建查询
+	// 地址在入库和入参阶段都已统一成小写，且字段使用 *_ci 排序规则，不需要对列做 LOWER()。
 	offset := (page - 1) * size
 	query := `SELECT e.tx_hash, e.block_number, e.block_time, e.from_address, e.to_address, 
 	          e.value, c.contract_symbol, c.decimals
 	          FROM events e
-	          LEFT JOIN contracts c ON LOWER(e.contract_address) = LOWER(c.contract_address)
-	          WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
+	          LEFT JOIN contracts c ON e.contract_address = c.contract_address
+	          WHERE e.contract_address = ? AND e.event_name = 'Transfer'`
 	args := []interface{}{contractAddress}
 
 	if fromAddr != "" {
-		query += " AND LOWER(e.from_address) = ?"
+		query += " AND e.from_address = ?"
 		args = append(args, fromAddr)
 	}
 	if toAddr != "" {
-		query += " AND LOWER(e.to_address) = ?"
+		query += " AND e.to_address = ?"
 		args = append(args, toAddr)
 	}
 
@@ -283,14 +284,14 @@ func handleContractTransfers(w http.ResponseWriter, r *http.Request, contractAdd
 	}
 
 	// 获取总数（用于分页）
-	countQuery := `SELECT COUNT(*) FROM events e WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
+	countQuery := `SELECT COUNT(*) FROM events e WHERE e.contract_address = ? AND e.event_name = 'Transfer'`
 	countArgs := []interface{}{contractAddress}
 	if fromAddr != "" {
-		countQuery += " AND LOWER(e.from_address) = ?"
+		countQuery += " AND e.from_address = ?"
 		countArgs = append(countArgs, fromAddr)
 	}
 	if toAddr != "" {
-		countQuery += " AND LOWER(e.to_address) = ?"
+		countQuery += " AND e.to_address = ?"
 		countArgs = append(countArgs, toAddr)
 	}
 
@@ -335,13 +336,14 @@ func handleContractTransactions(w http.ResponseWriter, r *http.Request, contract
 	}
 	funcName := r.URL.Query().Get("func_name")
 
-	// 构建查询（使用LOWER()确保大小写不敏感的比较）
+	// 构建查询
+	// 地址在入库和入参阶段都已统一成小写，且字段使用 *_ci 排序规则，不需要对列做 LOWER()。
 	offset := (page - 1) * size
 	query := `SELECT t.tx_hash, t.block_number, t.block_time, t.from_address, t.to_address,
 	          t.func_name, t.value, t.gas_used, t.status, c.contract_symbol, c.decimals
 	          FROM transactions t
-	          LEFT JOIN contracts c ON LOWER(t.contract_address) = LOWER(c.contract_address)
-	          WHERE LOWER(t.contract_address) = ?`
+	          LEFT JOIN contracts c ON t.contract_address = c.contract_address
+	          WHERE t.contract_address = ?`
 	args := []interface{}{contractAddress}
 
 	if funcName != "" {
@@ -390,7 +392,7 @@ func handleContractTransactions(w http.ResponseWriter, r *http.Request, contract
 	}
 
 	// 获取总数（用于分页）
-	countQuery := `SELECT COUNT(*) FROM transactions t WHERE LOWER(t.contract_address) = ?`
+	countQuery := `SELECT COUNT(*) FROM transactions t WHERE t.contract_address = ?`
 	countArgs := []interface{}{contractAddress}
 	if funcName != "" {
 		countQuery += " AND t.func_name = ?"
@@ -547,25 +549,26 @@ func handleHolderTransfers(w http.ResponseWriter, r *http.Request, contractAddre
 		role = "both" // 默认查询两种
 	}
 
-	// 构建查询（使用LOWER()确保大小写不敏感的比较）
+	// 构建查询
+	// 地址在入库和入参阶段都已统一成小写，且字段使用 *_ci 排序规则，不需要对列做 LOWER()。
 	offset := (page - 1) * size
 	query := `SELECT e.tx_hash, e.block_number, e.block_time, e.from_address, e.to_address, 
 	          e.value, c.contract_symbol, c.decimals
 	          FROM events e
-	          LEFT JOIN contracts c ON LOWER(e.contract_address) = LOWER(c.contract_address)
-	          WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
+	          LEFT JOIN contracts c ON e.contract_address = c.contract_address
+	          WHERE e.contract_address = ? AND e.event_name = 'Transfer'`
 	args := []interface{}{contractAddress}
 
-	// 根据role参数添加地址筛选条件（使用LOWER()确保大小写不敏感）
+	// 根据role参数添加地址筛选条件
 	switch role {
 	case "from":
-		query += " AND LOWER(e.from_address) = ?"
+		query += " AND e.from_address = ?"
 		args = append(args, holderAddress)
 	case "to":
-		query += " AND LOWER(e.to_address) = ?"
+		query += " AND e.to_address = ?"
 		args = append(args, holderAddress)
 	case "both":
-		query += " AND (LOWER(e.from_address) = ? OR LOWER(e.to_address) = ?)"
+		query += " AND (e.from_address = ? OR e.to_address = ?)"
 		args = append(args, holderAddress, holderAddress)
 	}
 
@@ -605,17 +608,17 @@ func handleHolderTransfers(w http.ResponseWriter, r *http.Request, contractAddre
 	}
 
 	// 获取总数（用于分页）
-	countQuery := `SELECT COUNT(*) FROM events e WHERE LOWER(e.contract_address) = ? AND e.event_name = 'Transfer'`
+	countQuery := `SELECT COUNT(*) FROM events e WHERE e.contract_address = ? AND e.event_name = 'Transfer'`
 	countArgs := []interface{}{contractAddress}
 	switch role {
 	case "from":
-		countQuery += " AND LOWER(e.from_address) = ?"
+		countQuery += " AND e.from_address = ?"
 		countArgs = append(countArgs, holderAddress)
 	case "to":
-		countQuery += " AND LOWER(e.to_address) = ?"
+		countQuery += " AND e.to_address = ?"
 		countArgs = append(countArgs, holderAddress)
 	case "both":
-		countQuery += " AND (LOWER(e.from_address) = ? OR LOWER(e.to_address) = ?)"
+		countQuery += " AND (e.from_address = ? OR e.to_address = ?)"
 		countArgs = append(countArgs, holderAddress, holderAddress)
 	}
 
@@ -673,25 +676,26 @@ func handleHolderTransactions(w http.ResponseWriter, r *http.Request, contractAd
 	}
 	funcName := r.URL.Query().Get("func_name")
 
-	// 构建查询（使用LOWER()确保大小写不敏感的比较）
+	// 构建查询
+	// 地址在入库和入参阶段都已统一成小写，且字段使用 *_ci 排序规则，不需要对列做 LOWER()。
 	offset := (page - 1) * size
 	query := `SELECT t.tx_hash, t.block_number, t.block_time, t.from_address, t.to_address,
 	          t.func_name, t.value, t.gas_used, t.status, c.contract_symbol, c.decimals
 	          FROM transactions t
-	          LEFT JOIN contracts c ON LOWER(t.contract_address) = LOWER(c.contract_address)
-	          WHERE LOWER(t.contract_address) = ?`
+	          LEFT JOIN contracts c ON t.contract_address = c.contract_address
+	          WHERE t.contract_address = ?`
 	args := []interface{}{contractAddress}
 
-	// 根据role参数添加地址筛选条件（使用LOWER()确保大小写不敏感）
+	// 根据role参数添加地址筛选条件
 	switch role {
 	case "from":
-		query += " AND LOWER(t.from_address) = ?"
+		query += " AND t.from_address = ?"
 		args = append(args, holderAddress)
 	case "to":
-		query += " AND LOWER(t.to_address) = ?"
+		query += " AND t.to_address = ?"
 		args = append(args, holderAddress)
 	case "both":
-		query += " AND (LOWER(t.from_address) = ? OR LOWER(t.to_address) = ?)"
+		query += " AND (t.from_address = ? OR t.to_address = ?)"
 		args = append(args, holderAddress, holderAddress)
 	}
 
@@ -742,17 +746,17 @@ func handleHolderTransactions(w http.ResponseWriter, r *http.Request, contractAd
 	}
 
 	// 获取总数（用于分页）
-	countQuery := `SELECT COUNT(*) FROM transactions t WHERE LOWER(t.contract_address) = ?`
+	countQuery := `SELECT COUNT(*) FROM transactions t WHERE t.contract_address = ?`
 	countArgs := []interface{}{contractAddress}
 	switch role {
 	case "from":
-		countQuery += " AND LOWER(t.from_address) = ?"
+		countQuery += " AND t.from_address = ?"
 		countArgs = append(countArgs, holderAddress)
 	case "to":
-		countQuery += " AND LOWER(t.to_address) = ?"
+		countQuery += " AND t.to_address = ?"
 		countArgs = append(countArgs, holderAddress)
 	case "both":
-		countQuery += " AND (LOWER(t.from_address) = ? OR LOWER(t.to_address) = ?)"
+		countQuery += " AND (t.from_address = ? OR t.to_address = ?)"
 		countArgs = append(countArgs, holderAddress, holderAddress)
 	}
 	if funcName != "" {

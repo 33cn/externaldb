@@ -533,7 +533,7 @@ func (db *DB) SaveEvent(event *Event) error {
 
 // GetContractByAddress 根据地址获取合约信息（大小写不敏感）
 func (db *DB) GetContractByAddress(address string) (*Contract, error) {
-	query := `SELECT * FROM contracts WHERE LOWER(contract_address) = LOWER(?)`
+	query := `SELECT * FROM contracts WHERE contract_address = ?`
 
 	contract := &Contract{}
 	var totalSupplyStr sql.NullString
@@ -625,8 +625,8 @@ func (db *DB) GetTokenBalancesByAddress(address string) ([]TokenBalance, error) 
 // ListERC20BalancesByHolderAddress 分页查询某地址持有的 ERC20 代币及余额（仅 contracts 中标记为 ERC20 的合约）
 func (db *DB) ListERC20BalancesByHolderAddress(holder string, minBalance string, limit, offset int) ([]AccountERC20BalanceRow, int, error) {
 	baseWhere := `FROM token_balances tb
-		INNER JOIN contracts c ON LOWER(tb.contract_address) = LOWER(c.contract_address)
-		WHERE LOWER(tb.address) = LOWER(?) AND c.contract_type = 'ERC20'`
+		INNER JOIN contracts c ON tb.contract_address = c.contract_address
+		WHERE tb.address = ? AND c.contract_type = 'ERC20'`
 	args := []interface{}{holder}
 	if minBalance != "" {
 		baseWhere += ` AND tb.balance >= ?`
