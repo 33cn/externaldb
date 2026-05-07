@@ -2,7 +2,6 @@
 
 # ERC20 Scanner 打包脚本
 # 功能：编译应用并创建可部署的测试包
-
 set -e
 
 # 颜色定义
@@ -199,8 +198,8 @@ EOF
 echo -e "  ${GREEN}✓ docker-compose.yml${NC}"
 
 # 复制其他配置文件
-if [ -f "${SCRIPT_DIR}/config.yaml.example" ]; then
-    cp "${SCRIPT_DIR}/config.yaml.example" "${PKG_DIR}/config/"
+if [ -f "${SCRIPT_DIR}/config/config.yaml.example" ]; then
+    cp "${SCRIPT_DIR}/config/config.yaml.example" "${PKG_DIR}/config/"
     echo -e "  ${GREEN}✓ config.yaml.example${NC}"
 fi
 

@@ -1,13 +1,18 @@
+# ERC20代币扫描器配置文件示例
+# 复制此文件为 config.yaml 并根据实际情况修改配置
+
+# 节点配置
 node:
   url: "https://mainnet.bityuan.com/eth"
   grpc: "localhost:8802"
   symbol: "bty"
 
-
+# 数据库配置
 database:
   enabled: true
   dsn: "root:password@tcp(localhost:3306)/token_scanner?charset=utf8mb4&parseTime=True&loc=Local"
 
+# es配置
 es:
   enabled: false
   host: "http://localhost:9200/"
@@ -16,7 +21,7 @@ es:
   user: "elastic"
   password: "elastic"
 
-
+# 扫描配置
 scanner:
   start_block: 42399544
   end_block: -1
@@ -34,6 +39,7 @@ balance_refresher:
 rpc:
   port: "8080"
 
+# 日志配置
 log:
   level: "info"
   file: "./logs/app.log"
