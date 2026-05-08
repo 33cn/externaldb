@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     KEY idx_to_address (to_address),
     KEY idx_func_selector (func_selector),
     KEY idx_status (status),
-    CONSTRAINT fk_tx_contract FOREIGN KEY (contract_address) REFERENCES contracts(contract_address) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_tx_contract FOREIGN KEY (contract_address) REFERENCES contracts(contract_address) ON DELETE RESTRICT ON UPDATE CASCADE
     -- 注意：func_selector 外键约束已移除，因为需要支持特殊标记（如 "nested_call"）
     -- 这些特殊标记不在 function_signatures 表中
     -- CONSTRAINT fk_tx_func_selector FOREIGN KEY (func_selector) REFERENCES function_signatures(selector) ON DELETE SET NULL ON UPDATE CASCADE
@@ -241,7 +241,7 @@ CREATE TABLE IF NOT EXISTS scan_progress (
 
 -- 插入初始记录（如果不存在）
 -- INSERT IGNORE INTO scan_progress (id, last_block_number, processed_tx_count) 
---VALUES (1, 0, 0);
+-- VALUES (1, 0, 0);
 
 -- 插入常见的ERC20函数签名
 INSERT INTO function_signatures (selector, function_name, function_signature, standard_type, function_type, description, is_standard) VALUES
