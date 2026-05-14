@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -58,7 +61,7 @@ func (c *Client) BlockNum() (uint64, error) {
 
 // rawBlock 用于接收 eth_getBlockByNumber 的原始 JSON，交易先按 RawMessage 拿入再按需补全 EIP-1559 字段后解码
 type rawBlock struct {
-	Hash         common.Hash        `json:"hash"`
+	Hash         common.Hash       `json:"hash"`
 	Transactions []json.RawMessage `json:"transactions"`
 	UncleHashes  []common.Hash     `json:"uncles"`
 }
@@ -93,7 +96,57 @@ func fixTxJSON(data json.RawMessage) (json.RawMessage, error) {
 	return json.Marshal(m)
 }
 
-// BlockByNumber 根据 blockNum 获取区块信息。对返回 type=2 但缺少 maxPriorityFeePerGas/maxFeePerGas 的节点做兼容。
+func isLikelyFullTxBlockFailure(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := strings.ToLower(err.Error())
+	return strings.Contains(s, "-32603") ||
+		strings.Contains(s, "method handler crashed") ||
+		strings.Contains(s, "could not coalesce error")
+}
+
+func txRawLooksLikeHashString(raw json.RawMessage) bool {
+	b := bytes.TrimSpace(raw)
+	return len(b) >= 2 && b[0] == '"'
+}
+
+// parseTxHashFromBlockJSON decodes tx hash from eth_getBlockByNumber(..., false); some chains omit "0x".
+func parseTxHashFromBlockJSON(raw json.RawMessage) (common.Hash, error) {
+	var s string
+	if err := json.Unmarshal(bytes.TrimSpace(raw), &s); err != nil {
+		return common.Hash{}, err
+	}
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return common.Hash{}, errors.New("empty hash string")
+	}
+	low := strings.ToLower(s)
+	if !strings.HasPrefix(low, "0x") {
+		if len(s) == 64 {
+			b, err := hexutil.Decode("0x" + s)
+			if err != nil {
+				return common.Hash{}, err
+			}
+			if len(b) != 32 {
+				return common.Hash{}, fmt.Errorf("hash length %d", len(b))
+			}
+			return common.BytesToHash(b), nil
+		}
+		s = "0x" + s
+	}
+	b, err := hexutil.Decode(s)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	if len(b) != 32 {
+		return common.Hash{}, fmt.Errorf("hash length %d", len(b))
+	}
+	return common.BytesToHash(b), nil
+}
+
+// BlockByNumber 根据 blockNum 获取区块信息。兼容：type=2 缺字段；fullTx=true 节点崩溃时改 fullTx=false + 逐笔拉取；
+// 交易列表里无 0x 前缀的哈希；单笔解码/拉取失败时该下标为 nil（调用方应跳过）。
 func (c *Client) BlockByNumber(number uint64) (*types.Block, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
@@ -102,12 +155,18 @@ func (c *Client) BlockByNumber(number uint64) (*types.Block, error) {
 		return c.cli.BlockByNumber(ctx, big.NewInt(int64(number)))
 	}
 
+	numArg := toBlockNumArg(big.NewInt(int64(number)))
 	var raw json.RawMessage
-	err := c.rpcCli.CallContext(ctx, &raw, "eth_getBlockByNumber", toBlockNumArg(big.NewInt(int64(number))), true)
+	err := c.rpcCli.CallContext(ctx, &raw, "eth_getBlockByNumber", numArg, true)
 	if err != nil {
-		return nil, err
+		if !isLikelyFullTxBlockFailure(err) {
+			return nil, err
+		}
+		if err2 := c.rpcCli.CallContext(ctx, &raw, "eth_getBlockByNumber", numArg, false); err2 != nil {
+			return nil, fmt.Errorf("eth_getBlockByNumber fullTx=true: %v; fullTx=false: %w", err, err2)
+		}
 	}
-	if len(raw) == 0 {
+	if len(bytes.TrimSpace(raw)) == 0 || string(bytes.TrimSpace(raw)) == "null" {
 		return nil, ethereum.NotFound
 	}
 
@@ -156,13 +215,29 @@ func (c *Client) BlockByNumber(number uint64) (*types.Block, error) {
 
 	txs := make([]*types.Transaction, len(body.Transactions))
 	for i, rawTx := range body.Transactions {
+		if txRawLooksLikeHashString(rawTx) {
+			th, err := parseTxHashFromBlockJSON(rawTx)
+			if err != nil {
+				txs[i] = nil
+				continue
+			}
+			tx, _, err := c.TxByHash(th)
+			if err != nil || tx == nil {
+				txs[i] = nil
+				continue
+			}
+			txs[i] = tx
+			continue
+		}
 		fixed, err := fixTxJSON(rawTx)
 		if err != nil {
-			return nil, err
+			txs[i] = nil
+			continue
 		}
 		var tx types.Transaction
 		if err := tx.UnmarshalJSON(fixed); err != nil {
-			return nil, err
+			txs[i] = nil
+			continue
 		}
 		txs[i] = &tx
 	}

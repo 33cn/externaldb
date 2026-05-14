@@ -372,6 +372,10 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 			log.Debug("seq-Block tx", "tx", hexutil.Encode(tx.Hash()), "txIndex", index)
 		}
 		for index, tx := range block.Transactions() {
+			if tx == nil {
+				log.Debug("seq-Block tx", "tx", "(nil)", "txIndex", index)
+				continue
+			}
 			log.Debug("seq-Block tx", "tx", tx.Hash().Hex(), "txIndex", index)
 		}
 		return nil // 跳过不处理
@@ -382,6 +386,17 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 		"height", detail.Block.Height,
 		"txCount", len(txs))
 	for _, idx := range evmtxs {
+		if idx < 0 || idx >= txs.Len() {
+			return fmt.Errorf("parseBlockFromES height=%d: EVM txIndex=%d out of range (blockTxLen=%d)", detail.Block.Height, idx, txs.Len())
+		}
+		if txs[idx] == nil {
+			var c33TxHash string
+			if idx < len(detail.Block.Txs) {
+				c33TxHash = hexutil.Encode(detail.Block.Txs[idx].Hash())
+			}
+			return fmt.Errorf("parseBlockFromES height=%d: EVM txIndex=%d missing ethereum tx body from node (chain33_tx_hash=%s); cannot process required EVM tx",
+				detail.Block.Height, idx, c33TxHash)
+		}
 		err := p.processTransactionWithReceipt(txs[idx], block)
 		if err != nil {
 			// 处理失败不影响其他交易的处理
@@ -485,6 +500,11 @@ func (p *Process) ParaseBlock(block *types.Block) error {
 		"height", block.NumberU64(),
 		"txCount", len(txs))
 	for _, tx := range txs {
+		if tx == nil {
+			log.Warn("Skipping nil transaction slot (node omitted tx body)",
+				"block", block.NumberU64())
+			continue
+		}
 		err := p.processTransactionWithReceipt(tx, block)
 		if err != nil {
 			// 处理失败不影响其他交易的处理

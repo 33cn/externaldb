@@ -37,7 +37,7 @@ type Report struct {
 
 	// Same paths as scanner
 	ContractCreation *ContractCreationView `json:"contractCreation,omitempty"`
-	ERC20Path        *ERC20PathView      `json:"erc20TransferPath,omitempty"`
+	ERC20Path        *ERC20PathView        `json:"erc20TransferPath,omitempty"`
 
 	AllLogs []LogView `json:"allLogs"`
 }
@@ -98,7 +98,7 @@ type LogView struct {
 
 // ContractCreationView matches handleContractCreation / save paths.
 type ContractCreationView struct {
-	DeployedAddress string `json:"deployedAddress"`
+	DeployedAddress string           `json:"deployedAddress"`
 	ERC20           ERC20CheckResult `json:"erc20Check"`
 	// If ERC20, same ABI reads as scanner
 	Name        string `json:"name,omitempty"`
@@ -142,11 +142,11 @@ type ERC20PathView struct {
 }
 
 type TokenContractCallView struct {
-	TokenAddress       string `json:"tokenAddress"`
-	IsDirectCall       bool   `json:"isDirectCall"`
-	FuncName           string `json:"funcName"`
-	FinalFuncSelector  string `json:"finalFuncSelector"`
-	TxToEqualsToken    bool   `json:"txToEqualsToken"`
+	TokenAddress      string `json:"tokenAddress"`
+	IsDirectCall      bool   `json:"isDirectCall"`
+	FuncName          string `json:"funcName"`
+	FinalFuncSelector string `json:"finalFuncSelector"`
+	TxToEqualsToken   bool   `json:"txToEqualsToken"`
 }
 
 type TransferInspect struct {
@@ -227,7 +227,7 @@ func (a *Analyzer) Inspect(txHash common.Hash) (*Report, error) {
 		return nil, fmt.Errorf("nil receipt")
 	}
 
-	block, err := a.c.BlockByNumber(receipt.BlockNumber.Uint64())
+	block, _, err := a.c.BlockByNumber(receipt.BlockNumber.Uint64())
 	if err != nil {
 		return nil, fmt.Errorf("BlockByNumber %d: %w", receipt.BlockNumber.Uint64(), err)
 	}
@@ -237,117 +237,7 @@ func (a *Analyzer) Inspect(txHash common.Hash) (*Report, error) {
 		return nil, fmt.Errorf("tx not found in block %d (hash mismatch?)", receipt.BlockNumber.Uint64())
 	}
 
-	rep := &Report{
-		TxHash: txHash.Hex(),
-		Block:  blockView(block, txIdx),
-		Receipt: &ReceiptView{
-			Status:            receipt.Status,
-			CumulativeGasUsed: receipt.CumulativeGasUsed,
-			GasUsed:           receipt.GasUsed,
-			TransactionIndex:  uint64(receipt.TransactionIndex),
-			BlockNumber:       receipt.BlockNumber.Uint64(),
-			BlockHash:         receipt.BlockHash.Hex(),
-			TxHash:            receipt.TxHash.Hex(),
-			LogsCount:         len(receipt.Logs),
-		},
-		AllLogs: make([]LogView, 0, len(receipt.Logs)),
-	}
-
-	if receipt.ContractAddress != (common.Address{}) {
-		rep.Receipt.ContractAddress = receipt.ContractAddress.Hex()
-	}
-
-	// scanner skips failed txs early
-	if receipt.Status != types.ReceiptStatusSuccessful {
-		rep.ScannerWouldProcess = false
-		rep.ScannerSkipReason = fmt.Sprintf("receipt status %d (scanner only processes successful txs)", receipt.Status)
-	} else {
-		rep.ScannerWouldProcess = true
-	}
-
-	var fromAddr common.Address
-	if tx.ChainId() != nil {
-		signer := types.NewEIP155Signer(tx.ChainId())
-		if s, err := types.Sender(signer, tx); err == nil {
-			fromAddr = s
-		}
-	}
-
-	ts := &TxSummary{
-		From:           fromAddr.Hex(),
-		Nonce:          tx.Nonce(),
-		Gas:            tx.Gas(),
-		ValueWei:       tx.Value().String(),
-		Type:           tx.Type(),
-		DataHex:        hex.EncodeToString(tx.Data()),
-		IsContractCall: len(tx.Data()) >= 4,
-	}
-	if tx.ChainId() != nil {
-		ts.ChainID = tx.ChainId().String()
-	}
-	if tx.To() != nil {
-		ts.To = tx.To().Hex()
-	}
-	if gp := tx.GasPrice(); gp != nil {
-		ts.GasPrice = gp.String()
-	}
-	if tx.Type() == types.DynamicFeeTxType {
-		if tx.GasTipCap() != nil {
-			ts.GasTipCap = tx.GasTipCap().String()
-		}
-		if tx.GasFeeCap() != nil {
-			ts.GasFeeCap = tx.GasFeeCap().String()
-		}
-	}
-	if len(tx.Data()) >= 4 {
-		ts.FuncSelector = hex.EncodeToString(tx.Data()[:4])
-	}
-	rep.Transaction = ts
-
-	transferEventID, err := transferEventID()
-	if err != nil {
-		return nil, err
-	}
-
-	for i, lg := range receipt.Logs {
-		lv := LogView{
-			Index:       uint(i),
-			Address:     lg.Address.Hex(),
-			Topics:      topicsHex(lg.Topics),
-			Data:        hex.EncodeToString(lg.Data),
-			Removed:     lg.Removed,
-			BlockNumber: lg.BlockNumber,
-			TxHash:      lg.TxHash.Hex(),
-			TxIndex:     lg.TxIndex,
-			BlockHash:   lg.BlockHash.Hex(),
-		}
-		if len(lg.Topics) >= 3 && lg.Topics[0] == transferEventID {
-			lv.IsTransferEvent = true
-		}
-		rep.AllLogs = append(rep.AllLogs, lv)
-	}
-
-	if !rep.ScannerWouldProcess {
-		return rep, nil
-	}
-
-	blockTime := time.Unix(int64(block.Time()), 0)
-	cst, _ := time.LoadLocation("Asia/Shanghai")
-
-	if tx.To() == nil {
-		cc := a.buildContractCreationView(receipt, block, tx, blockTime, cst)
-		rep.ContractCreation = cc
-		return rep, nil
-	}
-
-	ep := a.buildERC20Path(tx, receipt, block, transferEventID, fromAddr, blockTime, cst)
-	if ep != nil {
-		rep.ERC20Path = ep
-	} else {
-		rep.ScannerSkipReason = strings.TrimSpace(rep.ScannerSkipReason + "; no ERC20 Transfer logs in receipt (scanner returns without DB writes for this tx)")
-	}
-
-	return rep, nil
+	return a.buildReport(tx, receipt, block, txIdx)
 }
 
 func blockView(block *types.Block, txIdx int) *BlockView {
@@ -364,6 +254,9 @@ func blockView(block *types.Block, txIdx int) *BlockView {
 
 func txIndexInBlock(block *types.Block, h common.Hash) (int, bool) {
 	for i, t := range block.Transactions() {
+		if t == nil {
+			continue
+		}
 		if t.Hash() == h {
 			return i, true
 		}

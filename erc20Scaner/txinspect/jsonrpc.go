@@ -73,7 +73,7 @@ func (c *Client) callRPC(ctx context.Context, method string, params []interface{
 		return err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("http %s: %s", resp.Status, truncateBytes(respBody, 512))
+		return fmt.Errorf("http %s: %s", resp.Status, truncateBytes(respBody, 1024))
 	}
 
 	var env struct {
@@ -83,10 +83,12 @@ func (c *Client) callRPC(ctx context.Context, method string, params []interface{
 		Error   json.RawMessage `json:"error"`
 	}
 	if err := json.Unmarshal(respBody, &env); err != nil {
-		return fmt.Errorf("decode json-rpc envelope: %w (body=%s)", err, truncateBytes(respBody, 512))
+		return fmt.Errorf("decode json-rpc envelope: %w (http_status=%s body=%s)", err, resp.Status, truncateBytes(respBody, 1024))
 	}
 	if err := rpcErrFromRaw(env.Error); err != nil {
-		return err
+		paramsSummary := rpcParamsSummary(params)
+		return fmt.Errorf("%w | rpc_method=%s rpc_params=%s | request_body=%s | http_status=%s response_body=%s",
+			err, method, paramsSummary, truncateBytes(reqBody, 800), resp.Status, truncateBytes(respBody, 2048))
 	}
 	if result == nil {
 		return nil
@@ -96,7 +98,19 @@ func (c *Client) callRPC(ctx context.Context, method string, params []interface{
 		// Unmarshal null into result (e.g. **T or *T becomes nil where supported)
 		return json.Unmarshal([]byte("null"), result)
 	}
-	return json.Unmarshal(env.Result, result)
+	if err := json.Unmarshal(env.Result, result); err != nil {
+		return fmt.Errorf("decode json-rpc result for %s: %w | result_prefix=%s",
+			method, err, truncateBytes(env.Result, 1200))
+	}
+	return nil
+}
+
+func rpcParamsSummary(params []interface{}) string {
+	b, err := json.Marshal(params)
+	if err != nil {
+		return fmt.Sprintf("%#v", params)
+	}
+	return truncateBytes(b, 512)
 }
 
 func truncateBytes(b []byte, max int) string {
