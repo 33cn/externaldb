@@ -20,6 +20,7 @@ import (
 
 	chain33types "github.com/33cn/chain33/types"
 	"github.com/33cn/externaldb/db/block"
+	"github.com/33cn/externaldb/erc20Scaner/blockalign"
 	"github.com/33cn/externaldb/erc20Scaner/config"
 	"github.com/33cn/externaldb/erc20Scaner/database"
 	"github.com/33cn/externaldb/erc20Scaner/erc20abi/generated"
@@ -354,55 +355,75 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 		log.Error("Failed to get block by number", "err", err, "height", detail.Block.Height)
 		return err
 	}
-	txs := block.Transactions()
+	seqN := len(detail.Block.Txs)
+	ethN := block.Transactions().Len()
 
-	// check block txs length
-	// 回滚时会对不上
-	if len(detail.Block.Txs) != block.Transactions().Len() {
-		log.Warn("Block txs length mismatch, skipping",
+	var aligned []*types.Transaction
+	if ethN < seqN {
+		expects, errExpect := buildSlotEthExpectsFromBlockDetail(&detail)
+		if errExpect != nil {
+			log.Error("Failed to build chain33 slot expects for nonce alignment", "err", errExpect, "height", detail.Block.Height)
+			return fmt.Errorf("parseBlockFromES height=%d: eth tx count %d < chain33 %d, nonce alignment: %w",
+				detail.Block.Height, ethN, seqN, errExpect)
+		}
+		aligned, err = blockalign.AlignEthTxsByNonce(block, expects)
+		if err != nil {
+			log.Error("Failed to align eth txs by nonce", "err", err, "height", detail.Block.Height)
+			return fmt.Errorf("parseBlockFromES height=%d: AlignEthTxsByNonce: %w", detail.Block.Height, err)
+		}
+		log.Info("Aligned eth txs by nonce (eth body count < chain33 seq)",
+			"height", detail.Block.Height,
+			"chain33TxCount", seqN,
+			"ethBlockTxCount", ethN,
+		)
+	} else if ethN > seqN {
+		aligned, err = blockalign.AlignEthTxsWithSeqCount(block, seqN, p.cli)
+		if err != nil {
+			log.Error("Failed to align eth txs with chain33 block", "err", err, "height", detail.Block.Height)
+			return nil
+		}
+	}
+	if block.Transactions().Len() != len(detail.Block.Txs) {
+		log.Warn("chain33 seq tx count differs from eth_getBlock tx count",
 			"seq-seq", blockSeq.SyncSeq,
 			"seq-type", blockSeq.Type,
 			"seq-hash", blockSeq.Hash,
 			"blockHash", block.Hash().Hex(),
 			"seq-height", detail.Block.Height,
 			"seq-txCount", len(detail.Block.Txs),
-			"blockTxCount", block.Transactions().Len(),
+			"ethBlockTxCount", block.Transactions().Len(),
 		)
-		for index, tx := range detail.Block.Txs {
-			log.Debug("seq-Block tx", "tx", hexutil.Encode(tx.Hash()), "txIndex", index)
-		}
-		for index, tx := range block.Transactions() {
-			if tx == nil {
-				log.Debug("seq-Block tx", "tx", "(nil)", "txIndex", index)
-				continue
-			}
-			log.Debug("seq-Block tx", "tx", tx.Hash().Hex(), "txIndex", index)
-		}
-		return nil // 跳过不处理
 	}
 
 	log.Debug("Processing block transactions",
 		"startPoint", p.startPoint,
 		"height", detail.Block.Height,
-		"txCount", len(txs))
+		"txCount", len(aligned))
 	for _, idx := range evmtxs {
-		if idx < 0 || idx >= txs.Len() {
-			return fmt.Errorf("parseBlockFromES height=%d: EVM txIndex=%d out of range (blockTxLen=%d)", detail.Block.Height, idx, txs.Len())
+		if idx < 0 || idx >= len(aligned) {
+			log.Warn("parseBlockFromES: EVM tx index out of range, skip",
+				"height", detail.Block.Height,
+				"evmTxIndex", idx,
+				"alignedLen", len(aligned))
+			continue
 		}
-		if txs[idx] == nil {
+		if aligned[idx] == nil {
 			var c33TxHash string
 			if idx < len(detail.Block.Txs) {
 				c33TxHash = hexutil.Encode(detail.Block.Txs[idx].Hash())
 			}
-			return fmt.Errorf("parseBlockFromES height=%d: EVM txIndex=%d missing ethereum tx body from node (chain33_tx_hash=%s); cannot process required EVM tx",
-				detail.Block.Height, idx, c33TxHash)
+			log.Warn("parseBlockFromES: missing ethereum tx body for EVM slot, skip",
+				"height", detail.Block.Height,
+				"evmTxIndex", idx,
+				"chain33TxHash", c33TxHash)
+			continue
 		}
-		err := p.processTransactionWithReceipt(txs[idx], block)
+		err := p.processTransactionWithReceipt(aligned[idx], block)
 		if err != nil {
-			// 处理失败不影响其他交易的处理
+			// 处理失败只打日志，不返回错误，避免上层对同一块反复重试形成死循环
 			log.Error("Failed to process transaction",
 				"err", err,
-				"txHash", txs[idx].Hash().Hex(),
+				"txHash", aligned[idx].Hash().Hex(),
 				"block", block.NumberU64())
 		}
 	}

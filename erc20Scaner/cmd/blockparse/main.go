@@ -13,16 +13,26 @@ import (
 	"github.com/33cn/externaldb/erc20Scaner/txinspect"
 )
 
+// blockparseOut wraps the original ETH-RPC inspection plus an optional chain33 Note→eth second pass.
+type blockparseOut struct {
+	EthPass      *txinspect.BlockReport `json:"ethPass"`
+	Chain33Notes *chain33NoteReport     `json:"chain33NotePass,omitempty"`
+}
+
 func main() {
 	rpcURL := flag.String("rpc", "", "Ethereum JSON-RPC URL (required)")
 	height := flag.Uint64("height", 0, "block number to parse (decimal)")
+	seqTxCount := flag.Int("seq-tx-count", 0, "chain33 seq tx count for alignment (same as len(detail.Block.Txs) in parseBlockFromES); 0 = eth block tx count only")
+	chain33GRPC := flag.String("chain33-grpc", "", "optional chain33 gRPC host:port for second pass: fetch block by same height, filter evm execer, decode payload.Note → eth tx (jrpc/tx_analysis style)")
 	asJSON := flag.Bool("json", false, "print single JSON object")
 	flag.Parse()
 
 	args := flag.Args()
 	if *rpcURL == "" {
-		fmt.Fprintf(os.Stderr, "Usage: %s -rpc <url> [-height N] [flags] [N]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s -rpc <url> [-height N] [-seq-tx-count M] [flags] [N]\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "  Block height: -height N or positional decimal N.\n")
+		fmt.Fprintf(os.Stderr, "  When parseBlockFromES fails on a block, pass -seq-tx-count with len(chain33.Txs) from ES.\n")
+		fmt.Fprintf(os.Stderr, "  Second pass: -chain33-grpc host:port decodes EVM txs from chain33 block (same height) via payload.Note.\n")
 		flag.PrintDefaults()
 		os.Exit(2)
 	}
@@ -46,16 +56,23 @@ func main() {
 	c.ConnectEth(*rpcURL)
 	defer c.CloseConnect()
 
-	rep, err := txinspect.NewAnalyzer(c).InspectBlock(h)
+	rep, err := txinspect.NewAnalyzer(c).InspectBlock(h, *seqTxCount)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "inspect block: %s\n", formatInspectErr(err))
-		os.Exit(1)
+		//os.Exit(1)
 	}
+
+	var noteRep *chain33NoteReport
+	if strings.TrimSpace(*chain33GRPC) != "" {
+		noteRep = runChain33NotePass(strings.TrimSpace(*chain33GRPC), int64(h))
+	}
+
+	out := &blockparseOut{EthPass: rep, Chain33Notes: noteRep}
 
 	if *asJSON {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		if err := enc.Encode(rep); err != nil {
+		if err := enc.Encode(out); err != nil {
 			fmt.Fprintf(os.Stderr, "encode: %v\n", err)
 			os.Exit(1)
 		}
@@ -63,10 +80,13 @@ func main() {
 	}
 
 	printHuman(rep)
+	if noteRep != nil {
+		printChain33NotePass(noteRep)
+	}
 }
 
 func printHuman(b *txinspect.BlockReport) {
-	fmt.Printf("=== Block ===\n")
+	fmt.Printf("=== Block (eth RPC pass) ===\n")
 	fmt.Printf("Number:     %d\n", b.Number)
 	fmt.Printf("Hash:       %s\n", b.Hash)
 	fmt.Printf("Parent:     %s\n", b.ParentHash)
@@ -80,6 +100,9 @@ func printHuman(b *txinspect.BlockReport) {
 		fmt.Printf("\n--- [%d] %s ---\n", slot.Index, slot.TxHash)
 		if slot.Error != "" {
 			fmt.Printf("Error: %s\n", slot.Error)
+			if slot.Diag != nil {
+				printTxSlotDiag(slot.Diag)
+			}
 			continue
 		}
 		r := slot.Report
@@ -113,6 +136,38 @@ func printHuman(b *txinspect.BlockReport) {
 				fmt.Printf("  [%d] %s %s -> %s  %s %s\n", tr.LogIndex, tr.TokenInfo.Symbol, tr.From, tr.To, tr.ValueFormatted, tr.TokenAddress)
 			}
 		}
+	}
+}
+
+func printTxSlotDiag(d *txinspect.TxSlotDiag) {
+	if d == nil {
+		return
+	}
+	fmt.Printf("  diag.nonce: %d  gas: %d\n", d.Nonce, d.Gas)
+}
+
+func printChain33NotePass(n *chain33NoteReport) {
+	fmt.Printf("\n=== Second pass: chain33 gRPC → EVM payload.Note → eth tx (tx_analysis style) ===\n")
+	fmt.Printf("gRPC:   %s\n", n.GRPC)
+	fmt.Printf("Height: %d\n", n.Height)
+	if n.Error != "" {
+		fmt.Printf("Error:  %s\n", n.Error)
+		return
+	}
+	for _, it := range n.Items {
+		fmt.Printf("\n--- [c33:%d] chain33_tx=%s execer=%s ---\n", it.Index, it.Chain33TxHash, it.Execer)
+		if it.Skipped != "" {
+			fmt.Printf("Skipped: %s\n", it.Skipped)
+			continue
+		}
+		if it.Error != "" {
+			fmt.Printf("Error: %s\n", it.Error)
+			continue
+		}
+		fmt.Printf("evmID (ntx.Hash, same as tx_analysis evmIdStr): %s\n", it.EvmID)
+		fmt.Printf("evm_eth_tx_hash: %s\n", it.EvmEthTxHash)
+		fmt.Printf("gas=%d nonce=%d type=%d to=%s valueWei=%s note_hex_len=%d\n",
+			it.Gas, it.Nonce, it.Type, nullStr(it.To), it.ValueWei, it.NoteLenHexChars)
 	}
 }
 

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum"
@@ -22,6 +24,15 @@ type Client struct {
 	rpcCli  *rpc.Client
 	cli     *ethclient.Client
 	nodeURL string
+	// After eth_getTransactionByBlockNumberAndIndex returns -32601 once, skip it for later indices on this client.
+	txByNumberIdxUnsupported atomic.Bool
+	// After eth_getTransactionByBlockHashAndIndex returns -32601 once, skip it for later indices on this client.
+	txByHashIdxUnsupported atomic.Bool
+	// After eth_getBlockReceipts returns -32601 once, skip it for later indices on this client.
+	blockReceiptsUnsupported atomic.Bool
+	receiptsMu               sync.Mutex
+	receiptsBlockHash        common.Hash
+	receiptsCache            []*types.Receipt
 }
 
 // ConnectEth 连接节点
@@ -143,6 +154,198 @@ func parseTxHashFromBlockJSON(raw json.RawMessage) (common.Hash, error) {
 		return common.Hash{}, fmt.Errorf("hash length %d", len(b))
 	}
 	return common.BytesToHash(b), nil
+}
+
+// decodeTxFromRPCResponse decodes one transaction from eth_getTransaction* JSON (same rules as BlockByNumber body).
+func decodeTxFromRPCResponse(raw json.RawMessage) (*types.Transaction, error) {
+	b := bytes.TrimSpace(raw)
+	if len(b) == 0 || string(b) == "null" {
+		return nil, ethereum.NotFound
+	}
+	if txRawLooksLikeHashString(raw) {
+		return nil, fmt.Errorf("unexpected hash-only tx payload from RPC")
+	}
+	fixed, err := fixTxJSON(raw)
+	if err != nil {
+		return nil, err
+	}
+	var tx types.Transaction
+	if err := tx.UnmarshalJSON(fixed); err != nil {
+		return nil, err
+	}
+	return &tx, nil
+}
+
+func isRPCMethodUnavailable(err error) bool {
+	if err == nil {
+		return false
+	}
+	s := strings.ToLower(err.Error())
+	return strings.Contains(s, "-32601") ||
+		strings.Contains(s, "method not found") ||
+		strings.Contains(s, "does not exist") ||
+		strings.Contains(s, "not available")
+}
+
+func findReceiptByTxIndex(recs []*types.Receipt, txIndex uint64) *types.Receipt {
+	for _, r := range recs {
+		if r == nil {
+			continue
+		}
+		if uint64(r.TransactionIndex) == txIndex {
+			return r
+		}
+	}
+	return nil
+}
+
+// TransactionAtCanonicalIndex returns the tx at txIndex inside block (same index as chain33/EVM slot order).
+// Order: use non-nil body from getBlock if present; then eth_getTransactionByBlockNumberAndIndex;
+// then eth_getTransactionByBlockHashAndIndex; then eth_getBlockReceipts + eth_getTransactionByHash
+// (receipt.transactionIndex / txHash from the node — no chain33-local hash).
+func (c *Client) TransactionAtCanonicalIndex(block *types.Block, txIndex uint64) (*types.Transaction, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	defer cancel()
+	ti := int(txIndex)
+	eth := block.Transactions()
+	if ti >= 0 && ti < eth.Len() {
+		if tx := eth[ti]; tx != nil {
+			return tx, nil
+		}
+	}
+	num := hexutil.EncodeUint64(block.NumberU64())
+	idx := hexutil.EncodeUint64(txIndex)
+
+	byHash := func(bh common.Hash) (*types.Transaction, error) {
+		if bh == (common.Hash{}) {
+			return nil, fmt.Errorf("block hash is zero, cannot call eth_getTransactionByBlockHashAndIndex")
+		}
+		if c.rpcCli != nil {
+			var raw json.RawMessage
+			if err := c.rpcCli.CallContext(ctx, &raw, "eth_getTransactionByBlockHashAndIndex", bh, idx); err != nil {
+				return nil, err
+			}
+			return decodeTxFromRPCResponse(raw)
+		}
+		if c.cli == nil {
+			return nil, fmt.Errorf("not connected")
+		}
+		tx, err := c.cli.TransactionInBlock(ctx, bh, uint(txIndex))
+		if err != nil {
+			return nil, err
+		}
+		if tx == nil {
+			return nil, ethereum.NotFound
+		}
+		return tx, nil
+	}
+
+	if c.rpcCli != nil {
+		if !c.txByNumberIdxUnsupported.Load() {
+			var raw json.RawMessage
+			err := c.rpcCli.CallContext(ctx, &raw, "eth_getTransactionByBlockNumberAndIndex", num, idx)
+			if err != nil {
+				if isRPCMethodUnavailable(err) {
+					c.txByNumberIdxUnsupported.Store(true)
+				} else {
+					return nil, err
+				}
+			} else {
+				tx, decErr := decodeTxFromRPCResponse(raw)
+				if decErr != nil {
+					if isRPCMethodUnavailable(decErr) {
+						c.txByNumberIdxUnsupported.Store(true)
+					} else {
+						return nil, decErr
+					}
+				} else {
+					return tx, nil
+				}
+			}
+		}
+		if !c.txByHashIdxUnsupported.Load() {
+			tx, err := byHash(block.Hash())
+			if err == nil {
+				return tx, nil
+			}
+			if isRPCMethodUnavailable(err) {
+				c.txByHashIdxUnsupported.Store(true)
+			} else {
+				return nil, err
+			}
+		}
+		return c.txFromBlockReceipts(ctx, block, txIndex)
+	}
+
+	if c.cli == nil {
+		return nil, fmt.Errorf("not connected")
+	}
+	bh := block.Hash()
+	if bh != (common.Hash{}) {
+		tx, err := c.cli.TransactionInBlock(ctx, bh, uint(txIndex))
+		if err == nil && tx != nil {
+			return tx, nil
+		}
+	}
+	h, err := c.cli.HeaderByNumber(ctx, new(big.Int).SetUint64(block.NumberU64()))
+	if err != nil {
+		return nil, err
+	}
+	return byHash(h.Hash())
+}
+
+func (c *Client) txFromBlockReceipts(ctx context.Context, block *types.Block, txIndex uint64) (*types.Transaction, error) {
+	if c.rpcCli == nil {
+		return nil, fmt.Errorf("eth_getBlockReceipts requires rpc client")
+	}
+	if c.blockReceiptsUnsupported.Load() {
+		return nil, fmt.Errorf("eth_getBlockReceipts not implemented on this RPC (also need getBlock tx count = chain33 tx count, or use a fuller JSON-RPC endpoint)")
+	}
+	bh := block.Hash()
+	if bh == (common.Hash{}) {
+		return nil, fmt.Errorf("block hash is zero, cannot call eth_getBlockReceipts")
+	}
+	c.receiptsMu.Lock()
+	if c.receiptsCache != nil && c.receiptsBlockHash == bh {
+		recs := c.receiptsCache
+		c.receiptsMu.Unlock()
+		return c.txFromReceiptList(ctx, recs, txIndex)
+	}
+	c.receiptsMu.Unlock()
+
+	var raw json.RawMessage
+	if err := c.rpcCli.CallContext(ctx, &raw, "eth_getBlockReceipts", bh); err != nil {
+		if isRPCMethodUnavailable(err) {
+			c.blockReceiptsUnsupported.Store(true)
+			return nil, fmt.Errorf("eth_getBlockReceipts not implemented on this RPC (-32601 is method missing, not \"no EVM txs\"; empty block would return []): %w", err)
+		}
+		return nil, err
+	}
+	var recs []*types.Receipt
+	if err := json.Unmarshal(raw, &recs); err != nil {
+		return nil, fmt.Errorf("decode eth_getBlockReceipts: %w", err)
+	}
+	c.receiptsMu.Lock()
+	c.receiptsBlockHash = bh
+	c.receiptsCache = recs
+	c.receiptsMu.Unlock()
+	return c.txFromReceiptList(ctx, recs, txIndex)
+}
+
+func (c *Client) txFromReceiptList(ctx context.Context, recs []*types.Receipt, txIndex uint64) (*types.Transaction, error) {
+	r := findReceiptByTxIndex(recs, txIndex)
+	if r == nil {
+		return nil, ethereum.NotFound
+	}
+	_ = ctx
+	tx, _, err := c.TxByHash(r.TxHash)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil {
+		return nil, ethereum.NotFound
+	}
+	return tx, nil
 }
 
 // BlockByNumber 根据 blockNum 获取区块信息。兼容：type=2 缺字段；fullTx=true 节点崩溃时改 fullTx=false + 逐笔拉取；
