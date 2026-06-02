@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -18,6 +19,7 @@ import (
 	pcom "github.com/33cn/plugin/plugin/dapp/evm/executor/vm/common"
 	logtype "github.com/33cn/plugin/plugin/dapp/evm/types"
 	etypes "github.com/ethereum/go-ethereum/core/types"
+	_ "github.com/go-sql-driver/mysql" // MySQL driver
 )
 
 // Chain33.QueryTransaction TransactionDetail
@@ -202,6 +204,15 @@ func parseEvmTx(txDetail *types.TransactionDetail, getabi func(string) (string, 
 		info.Asset.Amount = int64(amount)
 	}
 
+	// 3. 通过evmHash 去数据库查询 transfer相关的log
+	transferLogs, err := getTransferLogs(info.EvmTxId)
+	if err != nil {
+		log.Error("ParseTx", " get transfer logs failed ", err.Error())
+		// 不返回错误，继续处理其他信息
+	} else {
+		info.Events = append(info.Events, transferLogs...)
+	}
+
 	return &info
 }
 
@@ -321,4 +332,104 @@ func UnpackEvent(abiStr string, topics [][]byte, data []byte) (string, map[strin
 
 	name, args, err := dbevm.UnpackEvent(eData, hashs, &contractABI)
 	return name, args, err
+}
+
+// getTransferLogs 根据evmHash（交易哈希）从MySQL数据库查询Transfer事件
+// 参考 handleContractAddressTransfersImpl，但不需要合约地址参数，只列出对应交易的transfer event
+func getTransferLogs(evmHash string) ([]EvmEvent, error) {
+	if mysqlDB == nil {
+		return nil, fmt.Errorf("MySQL database not initialized")
+	}
+
+	// 规范化evmHash（统一转换为小写，保留0x前缀）
+	evmHash = strings.ToLower(evmHash)
+	if !strings.HasPrefix(evmHash, "0x") {
+		evmHash = "0x" + evmHash
+	}
+	if len(evmHash) != 66 { // 0x + 64 hex chars
+		return nil, fmt.Errorf("invalid evmHash format: %s", evmHash)
+	}
+
+	// 构建查询，查询指定交易的所有Transfer事件
+	// 不需要合约地址参数，只根据tx_hash查询
+	query := `SELECT e.tx_hash, e.block_number, e.block_time, e.from_address, e.to_address, 
+	          e.value, c.contract_symbol, c.decimals, e.contract_address
+	          FROM events e
+	          LEFT JOIN contracts c ON LOWER(e.contract_address) = LOWER(c.contract_address)
+	          WHERE LOWER(e.tx_hash) = LOWER(?) AND e.event_name = 'Transfer'
+	          ORDER BY e.log_index ASC`
+
+	rows, err := mysqlDB.Query(query, evmHash)
+	if err != nil {
+		return nil, fmt.Errorf("database query error: %w", err)
+	}
+	defer rows.Close()
+
+	var events []EvmEvent
+	for rows.Next() {
+		var txHash string
+		var blockNumber uint64
+		var blockTime string
+		var fromAddr string
+		var toAddr string
+		var valueStr sql.NullString
+		var tokenSymbol sql.NullString
+		var tokenDecimals sql.NullInt16 // MySQL driver 不支持 NullUint8，使用 NullInt16
+		var contractAddr string
+
+		err := rows.Scan(
+			&txHash,
+			&blockNumber,
+			&blockTime,
+			&fromAddr,
+			&toAddr,
+			&valueStr,
+			&tokenSymbol,
+			&tokenDecimals,
+			&contractAddr,
+		)
+		if err != nil {
+			log.Error("getTransferLogs", "scan error", err)
+			continue
+		}
+
+		// 解析value
+		var value *big.Int
+		if valueStr.Valid && valueStr.String != "" {
+			value, _ = new(big.Int).SetString(valueStr.String, 10)
+		}
+		if value == nil {
+			value = big.NewInt(0)
+		}
+
+		// 构建事件参数
+		args := make(map[string]interface{})
+		args["from"] = fromAddr
+		args["to"] = toAddr
+		args["value"] = value
+		args["amount"] = value // 兼容性，同时提供value和amount
+
+		// 如果有代币信息，添加到参数中
+		if tokenSymbol.Valid {
+			args["token_symbol"] = tokenSymbol.String
+		}
+		if tokenDecimals.Valid {
+			args["token_decimals"] = uint8(tokenDecimals.Int16)
+		}
+		args["contract_address"] = contractAddr
+
+		// 创建EvmEvent
+		event := EvmEvent{
+			Name: "Transfer",
+			Args: args,
+		}
+
+		events = append(events, event)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return events, nil
 }

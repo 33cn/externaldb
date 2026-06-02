@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"io"
@@ -24,15 +25,17 @@ import (
 	"github.com/33cn/externaldb/util"
 	"github.com/33cn/externaldb/version"
 	tml "github.com/BurntSushi/toml"
+	_ "github.com/go-sql-driver/mysql" // MySQL driver
 	"github.com/rs/cors"
 )
 
 var (
 	log        = l.New("module", "main")
 	configPath = flag.String("f", "externaldb.toml", "configfile")
+	mysqlDB    *sql.DB // MySQL数据库连接
 )
 
-//HTTPConn http连接
+// HTTPConn http连接
 type HTTPConn struct {
 	in  io.Reader
 	out io.Writer
@@ -41,7 +44,7 @@ type HTTPConn struct {
 func (c *HTTPConn) Read(p []byte) (n int, err error)  { return c.in.Read(p) }
 func (c *HTTPConn) Write(d []byte) (n int, err error) { return c.out.Write(d) }
 
-//Close 关闭连接
+// Close 关闭连接
 func (c *HTTPConn) Close() error { return nil }
 
 func main() {
@@ -53,6 +56,23 @@ func main() {
 	cfg := InitCfg(*configPath)
 	util.SetupLog(cfg.Rpc.GetJrpcName(), "debug")
 	log.Info("load config", "cfgPath", *configPath, "wl", cfg.Rpc.WhiteList, "host", cfg.Rpc.JrpcHost, "titles", cfg.Chain)
+
+	// 初始化MySQL数据库连接
+	if cfg.GetMysql() != nil && cfg.GetMysql().Enabled && cfg.GetMysql().Dsn != "" {
+		var err error
+		mysqlDB, err = sql.Open("mysql", cfg.GetMysql().Dsn)
+		if err != nil {
+			log.Error("Failed to open MySQL database", "err", err)
+		} else {
+			if err := mysqlDB.Ping(); err != nil {
+				log.Error("Failed to ping MySQL database", "err", err)
+				mysqlDB = nil
+			} else {
+				log.Info("MySQL database connected successfully")
+			}
+		}
+	}
+
 	//初始化白名单
 	//返回whitelist["0.0.0.0"] = true
 	whitelist := InitWhiteList(cfg)
@@ -174,7 +194,7 @@ func withoutSlash(s string) string {
 	return strings.Trim(s, "/")
 }
 
-//InitCfg 初始化cfg
+// InitCfg 初始化cfg
 func InitCfg(path string) *proto.ConfigNew {
 	var cfg proto.ConfigNew
 	if _, err := tml.DecodeFile(path, &cfg); err != nil {
@@ -185,7 +205,7 @@ func InitCfg(path string) *proto.ConfigNew {
 	return &cfg
 }
 
-//InitWhiteList 初始化白名单
+// InitWhiteList 初始化白名单
 func InitWhiteList(cfg *proto.ConfigNew) map[string]bool {
 	whitelist := map[string]bool{}
 	if len(cfg.Rpc.WhiteList) == 1 && cfg.Rpc.WhiteList[0] == "*" {
