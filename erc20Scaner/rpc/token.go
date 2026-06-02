@@ -44,7 +44,7 @@ func handleTokensRouter(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleTokenList 查询ERC20 token列表
-// GET /evmapi/tokens?page=1&size=20&symbol=USDT&name=Token
+// GET /evmapi/tokens?page=1&size=20&symbol=USDT&name=Token&address=0x...
 func handleTokenList(w http.ResponseWriter, r *http.Request) {
 	// 解析查询参数
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
@@ -57,6 +57,16 @@ func handleTokenList(w http.ResponseWriter, r *http.Request) {
 	}
 	symbol := r.URL.Query().Get("symbol")
 	name := r.URL.Query().Get("name")
+	address := r.URL.Query().Get("address")
+
+	// 如果传了address参数，验证地址格式并规范化
+	if address != "" {
+		if !strings.HasPrefix(strings.ToLower(address), "0x") || len(address) != 42 {
+			writeError(w, http.StatusBadRequest, "Invalid token address format")
+			return
+		}
+		address = normalizeAddress(address)
+	}
 
 	// 构建查询，只查询ERC20类型的合约
 	offset := (page - 1) * size
@@ -65,6 +75,10 @@ func handleTokenList(w http.ResponseWriter, r *http.Request) {
 	          FROM contracts WHERE contract_type = 'ERC20'`
 	args := []interface{}{}
 
+	if address != "" {
+		query += " AND contract_address = ?"
+		args = append(args, address)
+	}
 	if symbol != "" {
 		query += " AND contract_symbol LIKE ?"
 		args = append(args, "%"+symbol+"%")
@@ -112,6 +126,10 @@ func handleTokenList(w http.ResponseWriter, r *http.Request) {
 	// 获取总数（用于分页）
 	countQuery := `SELECT COUNT(*) FROM contracts WHERE contract_type = 'ERC20'`
 	countArgs := []interface{}{}
+	if address != "" {
+		countQuery += " AND contract_address = ?"
+		countArgs = append(countArgs, address)
+	}
 	if symbol != "" {
 		countQuery += " AND contract_symbol LIKE ?"
 		countArgs = append(countArgs, "%"+symbol+"%")

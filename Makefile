@@ -19,7 +19,7 @@ PKG_LIST_INEFFASSIGN= `go list -f {{.Dir}} ./...  grep -v "common/log/log15"`
 PKG_LIST_Q := `go list ./... | grep -v "mocks"`
 PKG_LIST_GOSEC := `go list -f "{{.Dir}}" ./... | grep -v "mocks" | grep -v "cmd" | grep -v "types" | grep -v "commands" | grep -v "log15"`
 
-LDFLAGS := -ldflags "-w -s"
+LDFLAGS := -ldflags "-w -s -linkmode external -extldflags '-static'" 
 BUILD_FLAGS = -ldflags "-X github.com/33cn/externaldb/version.GitCommit=`git rev-parse --short=8 HEAD` -X github.com/33cn/externaldb/version.ReleaseDate=`date +%Y%m%d`"
 MKPATH=$(abspath $(lastword $(MAKEFILE_LIST)))
 MKDIR=$(dir $(MKPATH))
