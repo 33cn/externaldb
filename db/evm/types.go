@@ -130,7 +130,7 @@ func (t *Transfer) LoadBlockData(data map[string]interface{}) {
 	t.Height = convert.ToInt64(data["evm_height"])
 	t.HeightIndex = convert.ToInt64(data["evm_height_index"])
 	t.TxHash = convert.ToString(data["evm_tx_hash"])
-	t.ContractAddr = convert.ToString(data["contract_addr"])
+	t.ContractAddr = util.AddressConvert(convert.ToString(data["contract_addr"]))
 }
 
 // GetNewToken 获取新增的token

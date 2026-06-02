@@ -37,7 +37,7 @@ func TransferSingle(c *evm.Convert, op int, data evm.EVM) ([]db.Record, error) {
 	trans.Amount = convert.ToInt64(event["value"])
 	trans.To = util.AddressConvert(convert.ToString(event["to"]))
 	trans.From = util.AddressConvert(convert.ToString(event["from"]))
-	trans.Operator = convert.ToString(event["operator"])
+	trans.Operator = util.AddressConvert(convert.ToString(event["operator"]))
 	trans.TokenType = convert.ToString(ERC1155)
 	trans.LoadBlockData(data)
 
@@ -157,7 +157,7 @@ func TransferBatch(c *evm.Convert, op int, data evm.EVM) ([]db.Record, error) {
 				trans.Amount = convert.ToInt64(vals[i])
 				trans.To = util.AddressConvert(to)
 				trans.From = util.AddressConvert(from)
-				trans.Operator = operator
+				trans.Operator = util.AddressConvert(operator)
 				trans.TokenType = convert.ToString(ERC1155)
 
 				trans.LoadBlockData(data)

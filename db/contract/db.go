@@ -56,7 +56,7 @@ type Contract struct {
 
 func NewContractByMap(data map[string]interface{}) *Contract {
 	var c Contract
-	c.Address = convert.ToString(data["contract_addr"])
+	c.Address = util.AddressConvert(convert.ToString(data["contract_addr"]))
 	c.Creator = convert.ToString(data["contract_creator"])
 	c.DeployBlockHash = convert.ToString(data["evm_block_hash"])
 	c.DeployBlockTime = convert.ToInt64(data["evm_block_time"])

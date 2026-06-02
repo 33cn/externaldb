@@ -296,7 +296,7 @@ func (c *Convert) parseLog(mapinfo map[string]interface{}) []*types.EVMLog {
 				log.Error("parseLog: Decode EVMContractData", "err", err)
 				continue
 			}
-			mapinfo["contract_addr"] = cd.Addr
+			mapinfo["contract_addr"] = util.AddressConvert(cd.Addr)
 			mapinfo["contract_name"] = cd.Name
 			mapinfo["contract_creator"] = cd.Creator
 		case evmtypes.TyLogCallContract:
@@ -305,7 +305,7 @@ func (c *Convert) parseLog(mapinfo map[string]interface{}) []*types.EVMLog {
 				log.Error("parseLog: Decode ReceiptEVMContract", "err", err)
 				continue
 			}
-			mapinfo["contract_addr"] = ec.ContractAddr
+			mapinfo["contract_addr"] = util.AddressConvert(ec.ContractAddr)
 			mapinfo["contract_used_gas"] = ec.UsedGas
 		case evmtypes.TyLogEVMEventData:
 			var el types.EVMLog
@@ -406,7 +406,7 @@ func parseNote(mapinfo map[string]interface{}, payload string, addr string) (map
 		mapinfo["contract_abi"] = abi
 	} else {
 		mapinfo["call_func_name"] = mapNote["call_func_name"]
-		mapinfo["contract_addr"] = addr
+		mapinfo["contract_addr"] = util.AddressConvert(addr)
 	}
 
 	return mapinfo, nil
