@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # ERC20扫描器服务
+  scanner:
+    image: alpine:latest
+    container_name: erc20-scanner
+    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./bin/scanner:/app/scanner
+      - ./config/config.yaml:/app/config.yaml
+      - ./logs:/app/logs
+    network_mode: "host"
+    working_dir: /app
+    command: >
+      sh -c "
+        apk add --no-cache ca-certificates tzdata &&
+        chmod +x /app/scanner &&
+        /app/scanner -c /app/config.yaml
+      "
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # RPC API服务
+  rpc:
+    image: alpine:latest
+    container_name: erc20-scanner-rpc
+    restart: unless-stopped
+    depends_on:
+      scanner:
+        condition: service_started
+    environment:
+      - PORT=${RPC_PORT:-8080}
+      - TZ=Asia/Shanghai
+    ports:
+      - "${RPC_PORT:-8080}:8080"
+    volumes:
+      - ./bin/rpc-server:/app/rpc-server
+      - ./config/config.yaml:/app/config.yaml
+      - ./logs:/app/logs
+    network_mode: "host"
+    command: >
+      sh -c "
+        apk add --no-cache ca-certificates tzdata wget &&
+        chmod +x /app/rpc-server &&
+        /app/rpc-server -port $$PORT -c /app/config.yaml
+      "
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+

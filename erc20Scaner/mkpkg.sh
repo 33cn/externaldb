@@ -51,7 +51,7 @@ echo -e "${GREEN}Go 版本: ${GO_VERSION}${NC}"
 # 创建构建目录
 echo ""
 echo -e "${YELLOW}创建构建目录...${NC}"
-mkdir -p "${PKG_DIR}"/{bin,config,database,logs}
+mkdir -p "${PKG_DIR}"/{bin,config,database,logs,env}
 
 # 编译应用
 echo ""
@@ -87,115 +87,23 @@ ls -lh "${PKG_DIR}/bin/"
 echo ""
 echo -e "${YELLOW}复制配置文件...${NC}"
 
-# Docker Compose 文件（部署版本）
-cat > "${PKG_DIR}/docker-compose.yml" << 'EOF'
-version: '3.8'
+# Docker Compose 文件（从 deploy/ 目录复制）
+if [ -f "${SCRIPT_DIR}/deploy/docker-compose.yml" ]; then
+    cp "${SCRIPT_DIR}/deploy/docker-compose.yml" "${PKG_DIR}/docker-compose.yml"
+    echo -e "  ${GREEN}✓ docker-compose.yml${NC}"
+else
+    echo -e "  ${RED}✗ deploy/docker-compose.yml 不存在${NC}"
+    exit 1
+fi
 
-services:
-  # MySQL数据库服务
-  mysql:
-    image: mysql:8.0
-    container_name: erc20-scanner-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-token_scanner}
-      MYSQL_USER: ${MYSQL_USER:-scanner}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-scannerpass}
-      TZ: Asia/Shanghai
-    ports:
-      - "${MYSQL_PORT:-3306}:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ./mysql.cnf:/etc/mysql/conf.d/custom.cnf:ro
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - erc20-network
-
-  # ERC20扫描器服务
-  scanner:
-    image: alpine:latest
-    container_name: erc20-scanner
-    restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
-    environment:
-      - NODE_URL=${NODE_URL:-https://mainnet.bityuan.com/eth}
-      - START_BLOCK=${START_BLOCK:-42399544}
-      - END_BLOCK=${END_BLOCK:--1}
-      - DB_DSN=${MYSQL_USER:-scanner}:${MYSQL_PASSWORD:-scannerpass}@tcp(mysql:3306)/${MYSQL_DATABASE:-token_scanner}?charset=utf8mb4&parseTime=True&loc=Local
-      - TZ=Asia/Shanghai
-    volumes:
-      - ./bin/scanner:/app/scanner:ro
-      - ./logs:/app/logs
-    networks:
-      - erc20-network
-    command: >
-      sh -c "
-        apk add --no-cache ca-certificates tzdata &&
-        chmod +x /app/scanner &&
-        /app/scanner -u \"$$NODE_URL\" -s $$START_BLOCK $$([ \"$$END_BLOCK\" != \"-1\" ] && echo \"-e $$END_BLOCK\" || true) -db -dsn \"$$DB_DSN\"
-      "
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # RPC API服务
-  rpc:
-    image: alpine:latest
-    container_name: erc20-scanner-rpc
-    restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
-      scanner:
-        condition: service_started
-    environment:
-      - PORT=${RPC_PORT:-8080}
-      - DB_DSN=${MYSQL_USER:-scanner}:${MYSQL_PASSWORD:-scannerpass}@tcp(mysql:3306)/${MYSQL_DATABASE:-token_scanner}?charset=utf8mb4&parseTime=True&loc=Local
-      - TZ=Asia/Shanghai
-    ports:
-      - "${RPC_PORT:-8080}:8080"
-    volumes:
-      - ./bin/rpc-server:/app/rpc-server:ro
-      - ./logs:/app/logs
-    networks:
-      - erc20-network
-    command: >
-      sh -c "
-        apk add --no-cache ca-certificates tzdata wget &&
-        chmod +x /app/rpc-server &&
-        /app/rpc-server -port $$PORT -dsn \"$$DB_DSN\"
-      "
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-volumes:
-  mysql_data:
-    driver: local
-
-networks:
-  erc20-network:
-    driver: bridge
-EOF
-echo -e "  ${GREEN}✓ docker-compose.yml${NC}"
+# MySQL Docker Compose 文件 → env/docker-compose.yml
+if [ -f "${SCRIPT_DIR}/deploy/mysql-docker-compose.yml" ]; then
+    cp "${SCRIPT_DIR}/deploy/mysql-docker-compose.yml" "${PKG_DIR}/env/docker-compose.yml"
+    echo -e "  ${GREEN}✓ env/docker-compose.yml${NC}"
+else
+    echo -e "  ${RED}✗ deploy/mysql-docker-compose.yml 不存在${NC}"
+    exit 1
+fi
 
 # 复制其他配置文件
 if [ -f "${SCRIPT_DIR}/config/config.yaml.example" ]; then
@@ -209,8 +117,8 @@ if [ -f "${SCRIPT_DIR}/env.example" ]; then
 fi
 
 if [ -f "${SCRIPT_DIR}/mysql.cnf" ]; then
-    cp "${SCRIPT_DIR}/mysql.cnf" "${PKG_DIR}/"
-    echo -e "  ${GREEN}✓ mysql.cnf${NC}"
+    cp "${SCRIPT_DIR}/mysql.cnf" "${PKG_DIR}/database/"
+    echo -e "  ${GREEN}✓ database/mysql.cnf${NC}"
 fi
 
 # 复制数据库文件
@@ -289,10 +197,12 @@ erc20-scanner-*/
 ├── config/              # 配置文件
 │   └── config.yaml.example
 ├── database/            # 数据库文件
-│   └── schema.sql       # 数据库初始化脚本
+│   ├── schema.sql       # 数据库初始化脚本
+│   └── mysql.cnf        # MySQL 配置
 ├── logs/                # 日志目录（自动创建）
-├── docker-compose.yml   # Docker Compose 配置
-├── mysql.cnf            # MySQL 配置
+├── docker-compose.yml   # Docker Compose 配置（scanner + rpc）
+├── env/                 # 环境配置
+│   └── docker-compose.yml   # MySQL Docker Compose 配置
 ├── env.example          # 环境变量示例
 └── README.md            # 本文件
 ```
@@ -511,7 +421,8 @@ echo ""
 echo "包内容:"
 echo "  - bin/scanner (扫描器)"
 echo "  - bin/rpc-server (RPC服务)"
-echo "  - docker-compose.yml (Docker配置)"
+echo "  - docker-compose.yml (scanner + rpc 服务)"
+echo "  - env/docker-compose.yml (MySQL 服务)"
 echo "  - database/schema.sql (数据库初始化)"
 echo "  - config/ (配置文件)"
 echo "  - README.md (说明文档)"
@@ -520,7 +431,8 @@ echo "部署步骤:"
 echo "  1. 复制 ${PKG_NAME} 到测试机器"
 echo "  2. 解压: tar -xzf ${PKG_NAME}"
 echo "  3. 进入目录: cd ${PROJECT_NAME}-${VERSION}"
-echo "  4. 启动: ./start.sh 或 docker-compose up -d"
+echo "  4. 启动 MySQL: docker-compose -f env/docker-compose.yml up -d"
+echo "  5. 启动服务: docker-compose up -d"
 echo ""
 
 # 清理临时目录（保留打包文件）
