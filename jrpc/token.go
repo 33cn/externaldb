@@ -144,6 +144,7 @@ func (t *Token) TxList(q *querypara.Query, out *interface{}) error {
 	if err != nil {
 		return err
 	}
+	normalizeAddrInQuery(q)
 	cli, err := escli.NewESShortConnect(t.Host, t.Prefix, t.Version, t.Username, t.Password)
 	if err != nil {
 		return err
@@ -166,6 +167,7 @@ func (t *Token) TxCount(q *querypara.Query, out *interface{}) error {
 	if err != nil {
 		return err
 	}
+	normalizeAddrInQuery(q)
 	cli, err := escli.NewESShortConnect(t.Host, t.Prefix, t.Version, t.Username, t.Password)
 	if err != nil {
 		return err

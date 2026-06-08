@@ -1,8 +1,11 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/33cn/externaldb/db/block"
 	"github.com/33cn/externaldb/escli"
+	"github.com/33cn/externaldb/escli/querypara"
 	"github.com/33cn/externaldb/util"
 )
 
@@ -41,4 +44,42 @@ func GetLastSeq(host, prefix, id string, version int32, user, pwd string) int64 
 		return -1
 	}
 	return num
+}
+
+// addrKeys 地址类型字段，其值如果是 0x 开头需统一小写
+var addrKeys = map[string]bool{
+	"from":             true,
+	"to":               true,
+	"contract_addr":    true,
+	"contract_address": true,
+	"owner_addr":       true,
+	"owner_address":    true,
+	"creator":          true,
+}
+
+// normalizeAddrInQuery 将 query 中地址类型字段的 0x 值统一转为小写
+// EVM 地址大小写不敏感，但 ES 查询大小写敏感，统一小写避免查询不到
+func normalizeAddrInQuery(q *querypara.Query) {
+	if q == nil {
+		return
+	}
+	normalizeMatch := func(matches []*querypara.QMatch) {
+		for _, m := range matches {
+			if m == nil {
+				continue
+			}
+			if addrKeys[m.Key] {
+				if s, ok := m.Value.(string); ok && strings.HasPrefix(s, "0x") {
+					m.Value = strings.ToLower(s)
+				}
+			}
+			if m.SubQuery != nil {
+				normalizeAddrInQuery(m.SubQuery)
+			}
+		}
+	}
+	normalizeMatch(q.Match)
+	normalizeMatch(q.MatchOne)
+	normalizeMatch(q.Filter)
+	normalizeMatch(q.Not)
 }

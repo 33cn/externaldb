@@ -41,6 +41,7 @@ func (t *Tx) TxCount(q *querypara.Query, out *interface{}) error {
 		return errors.New(ErrBadParm)
 	}
 
+	normalizeAddrInQuery(q)
 	r, err := t.count(transaction.TransactionX, transaction.TransactionX, q)
 	if err != nil {
 		return err
@@ -70,6 +71,7 @@ func (t *Tx) TxList(q *querypara.Query, out *interface{}) error {
 		return errors.New(ErrBadParm)
 	}
 
+	normalizeAddrInQuery(q)
 	r, err := t.search(transaction.TransactionX, transaction.TransactionX, q, decodeTransaction)
 	if err != nil {
 		log.Error("TxList", "search", err.Error())

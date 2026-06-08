@@ -42,6 +42,7 @@ func (t *EVM) ContractList(q *querypara.Query, out *interface{}) error {
 		return errors.Wrapf(errors.New(ErrBadParm), "empty queryPara input")
 	}
 
+	normalizeAddrInQuery(q)
 	if q.Page == nil {
 		q.Page = &querypara.QPage{
 			Number: 1,
@@ -60,6 +61,7 @@ func (t *EVM) ContractList(q *querypara.Query, out *interface{}) error {
 // ContractCount 查询合约数量
 func (t *EVM) ContractCount(q *querypara.Query, out *interface{}) error {
 	var err error
+	normalizeAddrInQuery(q)
 	*out, err = t.count(contract.TableName, contract.TableName, q)
 	return err
 }
@@ -112,6 +114,7 @@ func (t *EVM) TokenList(q *querypara.Query, out *interface{}) error {
 	if q == nil {
 		return errors.Wrapf(errors.New(ErrBadParm), "empty queryPara input")
 	}
+	normalizeAddrInQuery(q)
 	if q.Page == nil {
 		q.Page = &querypara.QPage{
 			Number: 1,
@@ -132,6 +135,7 @@ func (t *EVM) TokenListAgg(q *querypara.Query, out *interface{}) error {
 	if q == nil {
 		return errors.Wrapf(errors.New(ErrBadParm), "empty queryPara input")
 	}
+	normalizeAddrInQuery(q)
 	if q.Page == nil {
 		q.Page = &querypara.QPage{
 			Number: 1,
@@ -234,6 +238,7 @@ type AggResult struct {
 // AddrCount count address
 func (t *EVM) AddrCount(q *querypara.Query, out *interface{}) error {
 	var err error
+	normalizeAddrInQuery(q)
 	*out, err = t.count(address.TableName, address.TableName, q)
 	return err
 }
@@ -264,6 +269,7 @@ func (t *EVM) TransferList(q *querypara.Query, out *interface{}) error {
 		return errors.Wrapf(errors.New(ErrBadParm), "empty queryPara input")
 	}
 
+	normalizeAddrInQuery(q)
 	if q.Page == nil {
 		q.Page = &querypara.QPage{
 			Number: 1,
@@ -282,6 +288,7 @@ func (t *EVM) TransferList(q *querypara.Query, out *interface{}) error {
 // TransferCount count transfer
 func (t *EVM) TransferCount(q *querypara.Query, out *interface{}) error {
 	var err error
+	normalizeAddrInQuery(q)
 	*out, err = t.count(evm.EVMTransferX, evm.EVMTransferX, q)
 	return err
 }
