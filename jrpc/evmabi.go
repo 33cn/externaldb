@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/33cn/chain33/common"
 	"github.com/33cn/externaldb/db"
@@ -46,6 +47,7 @@ func (t *Evm) SaveAbi(q *SaveAbiRequest, out *interface{}) error {
 	if q.Address == "" || q.Abi == "" {
 		return errors.Wrapf(errors.New(errBadParm), "address or abi empty")
 	}
+	q.Address = strings.ToLower(q.Address)
 	_, err := common.FromHex(q.Abi)
 	if err != nil {
 		return errors.Wrapf(errors.New(errBadParm), "abi format error")

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/33cn/externaldb/db"
 	"github.com/33cn/externaldb/db/address"
@@ -69,6 +70,7 @@ func (t *EVM) GetContract(address string, out *interface{}) error {
 		return errors.Wrapf(errors.New(ErrBadParm), "empty input")
 	}
 
+	address = strings.ToLower(address)
 	id := "contract-" + address
 	r, err := t.get(contract.TableName, contract.TableName, id)
 	if err != nil {
@@ -241,6 +243,7 @@ func (t *EVM) IsContract(address string, out *interface{}) error {
 	if address == "" {
 		return errors.Wrapf(errors.New(ErrBadParm), "empty input")
 	}
+	address = strings.ToLower(address)
 	id := "contract-" + address
 	_, err := t.get(contract.TableName, contract.TableName, id)
 	if err != nil {
