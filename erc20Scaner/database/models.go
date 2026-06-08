@@ -764,3 +764,163 @@ func (db *DB) GetEventsByContract(contractAddress string, limit int) ([]Event, e
 
 	return events, nil
 }
+
+// TokenAllowance 授权额度模型
+type TokenAllowance struct {
+	Owner           string    `db:"owner"`
+	Spender         string    `db:"spender"`
+	ContractAddress string    `db:"contract_address"`
+	Amount          *big.Int  `db:"amount"`
+	LastTxHash      string    `db:"last_tx_hash"`
+	LastBlockNumber uint64    `db:"last_block_number"`
+	LastUpdatedAt   time.Time `db:"last_updated_at"`
+	CreatedAt       time.Time `db:"created_at"`
+}
+
+// AllowanceRow 授权查询结果行（JOIN contracts）
+type AllowanceRow struct {
+	Owner           string
+	Spender         string
+	ContractAddress string
+	ContractName    string
+	ContractSymbol  string
+	Decimals        uint8
+	Amount          *big.Int
+	LastTxHash      string
+	LastBlockNumber uint64
+	LastUpdatedAt   time.Time
+}
+
+// InitTokenAllowancesTable 初始化授权额度表
+func (db *DB) InitTokenAllowancesTable() error {
+	query := `CREATE TABLE IF NOT EXISTS token_allowances (
+		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+		owner VARCHAR(42) NOT NULL COMMENT '授权方地址',
+		spender VARCHAR(42) NOT NULL COMMENT '被授权方地址',
+		contract_address VARCHAR(42) NOT NULL COMMENT 'ERC20合约地址',
+		amount DECIMAL(65,0) NOT NULL DEFAULT '0' COMMENT '授权额度（原始值）',
+		last_tx_hash VARCHAR(66) DEFAULT NULL COMMENT '最近一笔Approval事件tx hash',
+		last_block_number BIGINT UNSIGNED DEFAULT NULL COMMENT '最近一笔Approval事件区块号',
+		last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+		PRIMARY KEY (id),
+		UNIQUE KEY uk_owner_spender_contract (owner, spender, contract_address),
+		KEY idx_owner_amount (owner, amount)
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ERC20授权额度表'`
+
+	_, err := db.conn.Exec(query)
+	return err
+}
+
+// UpsertAllowance 插入或更新授权额度
+func (db *DB) UpsertAllowance(owner, spender, contractAddress string, amount *big.Int, txHash string, blockNumber uint64) error {
+	if err := db.InitTokenAllowancesTable(); err != nil {
+		return fmt.Errorf("failed to init token_allowances table: %w", err)
+	}
+
+	query := `INSERT INTO token_allowances (
+		owner, spender, contract_address, amount, last_tx_hash, last_block_number
+	) VALUES (?, ?, ?, ?, ?, ?)
+	ON DUPLICATE KEY UPDATE
+		amount = VALUES(amount),
+		last_tx_hash = VALUES(last_tx_hash),
+		last_block_number = VALUES(last_block_number),
+		last_updated_at = CURRENT_TIMESTAMP`
+
+	_, err := db.conn.Exec(query,
+		owner,
+		spender,
+		contractAddress,
+		amount.String(),
+		txHash,
+		blockNumber,
+	)
+	return err
+}
+
+// DeleteAllowance 删除授权记录（amount=0 时调用）
+func (db *DB) DeleteAllowance(owner, spender, contractAddress string) error {
+	query := `DELETE FROM token_allowances WHERE owner = ? AND spender = ? AND contract_address = ?`
+	_, err := db.conn.Exec(query, owner, spender, contractAddress)
+	return err
+}
+
+// ListAllowancesByOwner 按 owner 地址查询所有授权记录
+func (db *DB) ListAllowancesByOwner(owner string, minAmount string, contractFilter string, limit, offset int) ([]AllowanceRow, int, error) {
+	if err := db.InitTokenAllowancesTable(); err != nil {
+		return nil, 0, fmt.Errorf("failed to init token_allowances table: %w", err)
+	}
+
+	baseWhere := `FROM token_allowances ta
+		LEFT JOIN contracts c ON ta.contract_address = c.contract_address
+		WHERE ta.owner = ?`
+	args := []interface{}{owner}
+
+	if minAmount != "" {
+		baseWhere += ` AND ta.amount >= ?`
+		args = append(args, minAmount)
+	}
+	if contractFilter != "" {
+		baseWhere += ` AND ta.contract_address = ?`
+		args = append(args, contractFilter)
+	}
+
+	// 统计总数
+	countQuery := `SELECT COUNT(*) ` + baseWhere
+	var total int
+	if err := db.conn.QueryRow(countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	// 查询列表
+	listQuery := `SELECT ta.owner, ta.spender, ta.contract_address,
+		COALESCE(c.contract_name, ''),
+		COALESCE(c.contract_symbol, ''),
+		c.decimals,
+		ta.amount,
+		ta.last_tx_hash,
+		COALESCE(ta.last_block_number, 0),
+		ta.last_updated_at ` + baseWhere + `
+		ORDER BY ta.amount DESC LIMIT ? OFFSET ?`
+	listArgs := append(append([]interface{}(nil), args...), limit, offset)
+
+	rows, err := db.conn.Query(listQuery, listArgs...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var out []AllowanceRow
+	for rows.Next() {
+		var row AllowanceRow
+		var amountStr sql.NullString
+		if err := rows.Scan(
+			&row.Owner,
+			&row.Spender,
+			&row.ContractAddress,
+			&row.ContractName,
+			&row.ContractSymbol,
+			&row.Decimals,
+			&amountStr,
+			&row.LastTxHash,
+			&row.LastBlockNumber,
+			&row.LastUpdatedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		if amountStr.Valid && amountStr.String != "" {
+			v, ok := new(big.Int).SetString(amountStr.String, 10)
+			if ok {
+				row.Amount = v
+			}
+		}
+		if row.Amount == nil {
+			row.Amount = big.NewInt(0)
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	return out, total, nil
+}

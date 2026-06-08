@@ -761,65 +761,84 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 		return fmt.Errorf("transfer event not found in ABI")
 	}
 
-	// 解析所有日志，查找Transfer事件
-	// 使用结构体保存log index，以便后续正确保存
+	// Approval事件签名: Approval(address indexed owner, address indexed spender, uint256 value)
+	approvalEvent := parsedAbi.Events["Approval"]
+
+	// 解析所有日志，查找Transfer和Approval事件
 	type TransferWithLogIndex struct {
 		TransferInfo
-		LogIndex uint // 实际的log index
+		LogIndex uint
 	}
 	var transfers []TransferWithLogIndex
+	var approvals []ApprovalWithLogIndex
 	for logIndex, log := range receipt.Logs {
 		// 跳过已移除的日志
 		if log.Removed {
 			continue
 		}
-		// 检查日志主题是否匹配Transfer事件（第一个topic是事件签名hash）
+		// 检查日志主题数量（Transfer和Approval都有3个topics）
 		if len(log.Topics) < 3 {
 			continue
 		}
 
-		// Transfer事件应该有3个topics: [event_hash, from, to]
-		if log.Topics[0] != transferEvent.ID {
-			continue
-		}
+		if log.Topics[0] == transferEvent.ID {
+			// Transfer事件: [event_hash, from, to] + data: value
 
-		// 从topics中提取from和to（它们是indexed参数）
-		from := common.BytesToAddress(log.Topics[1].Bytes())
-		to := common.BytesToAddress(log.Topics[2].Bytes())
+			// 从topics中提取from和to（它们是indexed参数）
+			from := common.BytesToAddress(log.Topics[1].Bytes())
+			to := common.BytesToAddress(log.Topics[2].Bytes())
 
-		// 从data中提取value（非indexed参数）
-		// Transfer事件的data只包含value，是32字节的uint256
-		var value *big.Int
-		if len(log.Data) >= 32 {
-			value = new(big.Int).SetBytes(log.Data[:32])
-		} else {
-			// 如果data长度不够，跳过这个日志
-			continue
-		}
-
-		// 获取代币信息
-		tokenAddress := log.Address
-		tokenInfo, err := p.getTokenInfo(&tokenAddress)
-		if err != nil {
-			// 获取代币信息失败，使用默认值
-			tokenInfo = &TokenInfo{
-				Address:  tokenAddress.Hex(),
-				Symbol:   "UNKNOWN",
-				Decimals: 18,
-				Name:     "Unknown Token",
+			// 从data中提取value（非indexed参数）
+			var value *big.Int
+			if len(log.Data) >= 32 {
+				value = new(big.Int).SetBytes(log.Data[:32])
+			} else {
+				continue
 			}
-		}
 
-		transfers = append(transfers, TransferWithLogIndex{
-			TransferInfo: TransferInfo{
-				TokenAddress: tokenAddress,
-				From:         from,
-				To:           to,
+			// 获取代币信息
+			tokenAddress := log.Address
+			tokenInfo, err := p.getTokenInfo(&tokenAddress)
+			if err != nil {
+				tokenInfo = &TokenInfo{
+					Address:  tokenAddress.Hex(),
+					Symbol:   "UNKNOWN",
+					Decimals: 18,
+					Name:     "Unknown Token",
+				}
+			}
+
+			transfers = append(transfers, TransferWithLogIndex{
+				TransferInfo: TransferInfo{
+					TokenAddress: tokenAddress,
+					From:         from,
+					To:           to,
+					Value:        value,
+					TokenInfo:    *tokenInfo,
+				},
+				LogIndex: uint(logIndex),
+			})
+		} else if approvalEvent.ID != (common.Hash{}) && log.Topics[0] == approvalEvent.ID {
+			// Approval事件: [event_hash, owner, spender] + data: value
+
+			owner := common.BytesToAddress(log.Topics[1].Bytes())
+			spender := common.BytesToAddress(log.Topics[2].Bytes())
+
+			var value *big.Int
+			if len(log.Data) >= 32 {
+				value = new(big.Int).SetBytes(log.Data[:32])
+			} else {
+				continue
+			}
+
+			approvals = append(approvals, ApprovalWithLogIndex{
+				Owner:        owner,
+				Spender:      spender,
 				Value:        value,
-				TokenInfo:    *tokenInfo,
-			},
-			LogIndex: uint(logIndex), // 保存实际的log index
-		})
+				TokenAddress: log.Address,
+				LogIndex:     uint(logIndex),
+			})
+		}
 	}
 
 	// 如果没有找到Transfer事件，可能不是ERC20转账
@@ -1053,7 +1072,101 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 		}
 	}
 
+	// 处理 Approval 事件：保存到 events 表和 token_allowances 表
+	if p.enableDB {
+		for _, approval := range approvals {
+			// 保存 Approval 事件
+			err := p.saveApprovalEventToDB(&approval, block, tx.Hash())
+			if err != nil {
+				log.Error("Failed to save approval event",
+					"err", err,
+					"txHash", tx.Hash().Hex(),
+					"owner", approval.Owner.Hex(),
+					"spender", approval.Spender.Hex(),
+					"token", approval.TokenAddress.Hex())
+			}
+
+			// 更新 token_allowances
+			err = p.updateAllowanceInDB(
+				approval.Owner,
+				approval.Spender,
+				approval.TokenAddress,
+				approval.Value,
+				tx.Hash(),
+				block.NumberU64(),
+			)
+			if err != nil {
+				log.Error("Failed to update allowance",
+					"err", err,
+					"owner", approval.Owner.Hex(),
+					"spender", approval.Spender.Hex(),
+					"token", approval.TokenAddress.Hex())
+			} else {
+				log.Debug("Allowance updated",
+					"owner", approval.Owner.Hex(),
+					"spender", approval.Spender.Hex(),
+					"token", approval.TokenAddress.Hex(),
+					"amount", approval.Value.String())
+			}
+		}
+	}
+
 	return nil
+}
+
+// saveApprovalEventToDB 保存 Approval 事件到 events 表
+func (p *Process) saveApprovalEventToDB(approval *ApprovalWithLogIndex, block *types.Block, txHash common.Hash) error {
+	if p.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	// Approval事件的topic0签名
+	approvalEventSig := common.HexToHash("0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925")
+
+	dbEvent := &database.Event{
+		TxHash:          txHash.Hex(),
+		BlockNumber:     block.NumberU64(),
+		BlockTime:       time.Unix(int64(block.Time()), 0),
+		LogIndex:        approval.LogIndex,
+		ContractAddress: normalizeAddress(approval.TokenAddress.Hex()),
+		EventName:       "Approval",
+		EventSignature:  approvalEventSig.Hex(),
+		OwnerAddress:    normalizeAddress(approval.Owner.Hex()),
+		SpenderAddress:  normalizeAddress(approval.Spender.Hex()),
+		Amount:          approval.Value,
+		Topic0:          approvalEventSig.Hex(),
+		Topic1:          common.BytesToHash(approval.Owner.Bytes()).Hex(),
+		Topic2:          common.BytesToHash(approval.Spender.Bytes()).Hex(),
+	}
+
+	return p.db.SaveEvent(dbEvent)
+}
+
+// updateAllowanceInDB 更新授权额度到 token_allowances 表
+// amount=0 时删除记录（授权已撤销）
+func (p *Process) updateAllowanceInDB(owner, spender, contractAddress common.Address, amount *big.Int, txHash common.Hash, blockNumber uint64) error {
+	if p.db == nil {
+		return fmt.Errorf("database not initialized")
+	}
+
+	zero := big.NewInt(0)
+	if amount.Cmp(zero) == 0 {
+		// amount=0 表示取消授权，删除记录
+		return p.db.DeleteAllowance(
+			normalizeAddress(owner.Hex()),
+			normalizeAddress(spender.Hex()),
+			normalizeAddress(contractAddress.Hex()),
+		)
+	}
+
+	return p.db.UpsertAllowance(
+		normalizeAddress(owner.Hex()),
+		normalizeAddress(spender.Hex()),
+		normalizeAddress(contractAddress.Hex()),
+		amount,
+		txHash.Hex(),
+		blockNumber,
+	)
 }
 
 // getBalanceFromContract 从合约获取地址余额
@@ -1079,6 +1192,15 @@ func (p *Process) getBalanceFromContract(contractAddress, address *common.Addres
 		return big.NewInt(0), nil
 	}
 	return balance, nil
+}
+
+// ApprovalWithLogIndex Approval事件信息（含log index）
+type ApprovalWithLogIndex struct {
+	Owner        common.Address
+	Spender      common.Address
+	Value        *big.Int
+	TokenAddress common.Address
+	LogIndex     uint
 }
 
 // TransferInfo 转账信息
