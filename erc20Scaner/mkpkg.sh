@@ -121,6 +121,11 @@ if [ -f "${SCRIPT_DIR}/mysql.cnf" ]; then
     echo -e "  ${GREEN}✓ database/mysql.cnf${NC}"
 fi
 
+if [ -f "${SCRIPT_DIR}/UPGRADE_v1.4_to_v1.5.md" ]; then
+    cp "${SCRIPT_DIR}/UPGRADE_v1.4_to_v1.5.md" "${PKG_DIR}/"
+    echo -e "  ${GREEN}✓ UPGRADE_v1.4_to_v1.5.md${NC}"
+fi
+
 # 复制数据库文件
 if [ -f "${SCRIPT_DIR}/database/schema.sql" ]; then
     cp "${SCRIPT_DIR}/database/schema.sql" "${PKG_DIR}/database/"
