@@ -172,9 +172,10 @@ type TransferInspect struct {
 
 // ApprovalPathView mirrors the Approval handling path (scanner saveApprovalEventToDB + updateAllowanceInDB).
 type ApprovalPathView struct {
-	Approvals         []ApprovalInspect `json:"approvals"`
-	DBEventPreview    *EventDBPreview   `json:"dbEventRowPreview,omitempty"`
-	DBAllowanceAction string            `json:"dbAllowanceAction,omitempty"` // "upsert" or "delete (revoke)"
+	Approvals []ApprovalInspect `json:"approvals"`
+	// DBAllowanceAction describes the DB effect for the last approval in the list
+	// (matches scanner "last loop wins" behavior): "upsert" or "delete (revoke)".
+	DBAllowanceAction string `json:"dbAllowanceAction,omitempty"`
 }
 
 // ApprovalInspect holds one parsed Approval event with token info.

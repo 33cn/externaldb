@@ -782,8 +782,7 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 			LogIndex: rt.LogIndex,
 		})
 	}
-	var approvals []txparser.ParsedApproval
-	approvals = rawApprovals
+	approvals := rawApprovals
 
 	// 如果没有找到Transfer事件，可能不是ERC20转账
 	if len(transfers) == 0 {
