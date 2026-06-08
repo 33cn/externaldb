@@ -117,8 +117,8 @@ if [ -f "${SCRIPT_DIR}/env.example" ]; then
 fi
 
 if [ -f "${SCRIPT_DIR}/mysql.cnf" ]; then
-    cp "${SCRIPT_DIR}/mysql.cnf" "${PKG_DIR}/database/"
-    echo -e "  ${GREEN}✓ database/mysql.cnf${NC}"
+    cp "${SCRIPT_DIR}/mysql.cnf" "${PKG_DIR}/env/"
+    echo -e "  ${GREEN}✓ env/mysql.cnf${NC}"
 fi
 
 if [ -f "${SCRIPT_DIR}/UPGRADE_v1.4_to_v1.5.md" ]; then
@@ -126,15 +126,15 @@ if [ -f "${SCRIPT_DIR}/UPGRADE_v1.4_to_v1.5.md" ]; then
     echo -e "  ${GREEN}✓ UPGRADE_v1.4_to_v1.5.md${NC}"
 fi
 
-# 复制数据库文件
+# 复制数据库文件到 env/
 if [ -f "${SCRIPT_DIR}/database/schema.sql" ]; then
-    cp "${SCRIPT_DIR}/database/schema.sql" "${PKG_DIR}/database/"
-    echo -e "  ${GREEN}✓ database/schema.sql${NC}"
+    cp "${SCRIPT_DIR}/database/schema.sql" "${PKG_DIR}/env/"
+    echo -e "  ${GREEN}✓ env/schema.sql${NC}"
 fi
 
 if [ -f "${SCRIPT_DIR}/database/migration_add_token_allowances.sql" ]; then
-    cp "${SCRIPT_DIR}/database/migration_add_token_allowances.sql" "${PKG_DIR}/database/"
-    echo -e "  ${GREEN}✓ database/migration_add_token_allowances.sql${NC}"
+    cp "${SCRIPT_DIR}/database/migration_add_token_allowances.sql" "${PKG_DIR}/env/"
+    echo -e "  ${GREEN}✓ env/migration_add_token_allowances.sql${NC}"
 fi
 
 # 创建说明文档
@@ -206,13 +206,13 @@ erc20-scanner-*/
 │   └── rpc-server       # RPC服务
 ├── config/              # 配置文件
 │   └── config.yaml.example
-├── database/            # 数据库文件
-│   ├── schema.sql       # 数据库初始化脚本
-│   └── mysql.cnf        # MySQL 配置
 ├── logs/                # 日志目录（自动创建）
 ├── docker-compose.yml   # Docker Compose 配置（scanner + rpc）
-├── env/                 # 环境配置
-│   └── docker-compose.yml   # MySQL Docker Compose 配置
+├── env/                 # 环境配置 + 数据库文件
+│   ├── docker-compose.yml   # MySQL Docker Compose 配置
+│   ├── schema.sql           # 数据库初始化脚本
+│   ├── migration_add_token_allowances.sql  # 升级脚本
+│   └── mysql.cnf            # MySQL 配置
 ├── env.example          # 环境变量示例
 └── README.md            # 本文件
 ```
