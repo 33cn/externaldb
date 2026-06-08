@@ -19,8 +19,12 @@ PKG_LIST_INEFFASSIGN= `go list -f {{.Dir}} ./...  grep -v "common/log/log15"`
 PKG_LIST_Q := `go list ./... | grep -v "mocks"`
 PKG_LIST_GOSEC := `go list -f "{{.Dir}}" ./... | grep -v "mocks" | grep -v "cmd" | grep -v "types" | grep -v "commands" | grep -v "log15"`
 
-LDFLAGS := -ldflags "-w -s -linkmode external -extldflags '-static'" 
-BUILD_FLAGS = -ldflags "-X github.com/33cn/externaldb/version.GitCommit=`git rev-parse --short=8 HEAD` -X github.com/33cn/externaldb/version.ReleaseDate=`date +%Y%m%d`"
+# 版本信息
+VERSION_LDFLAGS = -X github.com/33cn/externaldb/version.GitCommit=`git rev-parse --short=8 HEAD` -X github.com/33cn/externaldb/version.ReleaseDate=`date +%Y%m%d`
+# 动态编译
+BUILD_FLAGS = -ldflags "$(VERSION_LDFLAGS)"
+# 静态编译 (CGO_ENABLED=0, 纯 Go 无需 musl)
+STATIC_BUILD = CGO_ENABLED=0 go build -ldflags "-w -s $(VERSION_LDFLAGS)"
 MKPATH=$(abspath $(lastword $(MAKEFILE_LIST)))
 MKDIR=$(dir $(MKPATH))
 DAPP := ""
@@ -87,35 +91,35 @@ checkgofmt: ## get all go files and run go fmt on them
 
 .PHONY: doc
 doc: swag
-	@go build $(BUILD_FLAGS) -v -i -o swag2md ${SRC}/tools/swag2md
+	@go build $(BUILD_FLAGS) -v -o swag2md ${SRC}/tools/swag2md
 	@bash ./tools/doc/doc.sh
 
 .PHONY: code_gen
 code_gen: swag
 
-build: code_gen ## Build the binary file
-	@go build $(BUILD_FLAGS) -v -o  $(PRC) $(SRC_RPC)
-	@go build $(BUILD_FLAGS) -v -o  $(CLI_SYNC) $(SRC_CLI)/sync
-	@go build $(BUILD_FLAGS) -v -o  $(CLI_CONVERT) $(SRC_CLI)/convert
-	@go build $(BUILD_FLAGS) -v -o  build/convertfix $(SRC_CLI)/convert-fix-tool/
-	@go build $(BUILD_FLAGS) -v -o  build/rpc $(SRC)/rpc/
-	@go build $(BUILD_FLAGS) -v -o  build/dummy_node $(SRC_CLI)/dummy_node/
-	@go build $(BUILD_FLAGS) -v -o  build/sync_convert $(SRC_CLI)/sync_convert
+build: code_gen ## Build all binaries (static, CGO_ENABLED=0)
+	@$(STATIC_BUILD) -o  $(PRC) $(SRC_RPC)
+	@$(STATIC_BUILD) -o  $(CLI_SYNC) $(SRC_CLI)/sync
+	@$(STATIC_BUILD) -o  $(CLI_CONVERT) $(SRC_CLI)/convert
+	@$(STATIC_BUILD) -o  build/convertfix $(SRC_CLI)/convert-fix-tool/
+	@$(STATIC_BUILD) -o  build/rpc $(SRC)/rpc/
+	@$(STATIC_BUILD) -o  build/dummy_node $(SRC_CLI)/dummy_node/
+	@$(STATIC_BUILD) -o  build/sync_convert $(SRC_CLI)/sync_convert
 	@cp config/externaldb.toml build/externaldb.toml
 
 .PHONY: build_convert
-build_convert: proto
-	@go build $(BUILD_FLAGS) -v -i -o  $(CLI_CONVERT) $(SRC_CLI)/convert
+build_convert: proto ## Build convert binary (static)
+	@$(STATIC_BUILD) -o  $(CLI_CONVERT) $(SRC_CLI)/convert
 
 .PHONY: build_rpc
-build_rpc: code_gen
-	@go build $(BUILD_FLAGS) -v -i -o  build/rpc $(SRC)/rpc/
+build_rpc: code_gen ## Build rpc binary (static)
+	@$(STATIC_BUILD) -o  build/rpc $(SRC)/rpc/
 
-release: ## Build the binary file
-	@go build $(LDFLAGS) -v -i -o  $(PRC) $(SRC_RPC)
-	@go build $(LDFLAGS) -v -i -o  $(CLI_SYNC) $(SRC_CLI)/sync
-	@go build $(LDFLAGS) -v -i -o  $(CLI_CONVERT) $(SRC_CLI)/convert
-	@go build $(BUILD_FLAGS) -v -i -o  build/rpc $(SRC)/rpc/
+release: code_gen ## Build core binaries (static, CGO_ENABLED=0)
+	@$(STATIC_BUILD) -o  $(PRC) $(SRC_RPC)
+	@$(STATIC_BUILD) -o  $(CLI_SYNC) $(SRC_CLI)/sync
+	@$(STATIC_BUILD) -o  $(CLI_CONVERT) $(SRC_CLI)/convert
+	@$(STATIC_BUILD) -o  build/rpc $(SRC)/rpc/
 	@cp config/externaldb.toml build/externaldb.toml
 
 clean: ## Remove previous build
