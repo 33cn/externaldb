@@ -16,6 +16,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/gin-gonic/gin v1.6.2
 	github.com/go-openapi/swag v0.21.1 // indirect
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/olivere/elastic v6.2.35+incompatible
 	github.com/olivere/elastic/v7 v7.0.24
@@ -27,7 +28,7 @@ require (
 	github.com/swaggo/swag v1.7.8
 	github.com/xuperchain/log15 v0.0.0-20190620081506-bc88a9198230
 	github.com/yccproject/ycc v0.0.0-20220627083516-6cd4eb264dde
-	google.golang.org/grpc v1.40.0 // indirect
+	google.golang.org/grpc v1.40.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
