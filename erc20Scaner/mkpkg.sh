@@ -51,7 +51,7 @@ echo -e "${GREEN}Go 版本: ${GO_VERSION}${NC}"
 # 创建构建目录
 echo ""
 echo -e "${YELLOW}创建构建目录...${NC}"
-mkdir -p "${PKG_DIR}"/{bin,config,database,logs,env}
+mkdir -p "${PKG_DIR}"/{bin,config,logs,env/database}
 
 # 编译应用
 echo ""
@@ -111,14 +111,9 @@ if [ -f "${SCRIPT_DIR}/config/config.yaml.example" ]; then
     echo -e "  ${GREEN}✓ config.yaml.example${NC}"
 fi
 
-if [ -f "${SCRIPT_DIR}/env.example" ]; then
-    cp "${SCRIPT_DIR}/env.example" "${PKG_DIR}/"
-    echo -e "  ${GREEN}✓ env.example${NC}"
-fi
-
 if [ -f "${SCRIPT_DIR}/mysql.cnf" ]; then
-    cp "${SCRIPT_DIR}/mysql.cnf" "${PKG_DIR}/env/"
-    echo -e "  ${GREEN}✓ env/mysql.cnf${NC}"
+    cp "${SCRIPT_DIR}/mysql.cnf" "${PKG_DIR}/env/database/"
+    echo -e "  ${GREEN}✓ env/database/mysql.cnf${NC}"
 fi
 
 if [ -f "${SCRIPT_DIR}/UPGRADE_v1.4_to_v1.5.md" ]; then
@@ -126,15 +121,15 @@ if [ -f "${SCRIPT_DIR}/UPGRADE_v1.4_to_v1.5.md" ]; then
     echo -e "  ${GREEN}✓ UPGRADE_v1.4_to_v1.5.md${NC}"
 fi
 
-# 复制数据库文件到 env/
+# 复制数据库文件到 env/database/
 if [ -f "${SCRIPT_DIR}/database/schema.sql" ]; then
-    cp "${SCRIPT_DIR}/database/schema.sql" "${PKG_DIR}/env/"
-    echo -e "  ${GREEN}✓ env/schema.sql${NC}"
+    cp "${SCRIPT_DIR}/database/schema.sql" "${PKG_DIR}/env/database/"
+    echo -e "  ${GREEN}✓ env/database/schema.sql${NC}"
 fi
 
 if [ -f "${SCRIPT_DIR}/database/migration_add_token_allowances.sql" ]; then
-    cp "${SCRIPT_DIR}/database/migration_add_token_allowances.sql" "${PKG_DIR}/env/"
-    echo -e "  ${GREEN}✓ env/migration_add_token_allowances.sql${NC}"
+    cp "${SCRIPT_DIR}/database/migration_add_token_allowances.sql" "${PKG_DIR}/env/database/"
+    echo -e "  ${GREEN}✓ env/database/migration_add_token_allowances.sql${NC}"
 fi
 
 # 创建说明文档
@@ -156,9 +151,6 @@ cd erc20-scanner-*
 ### 2. 配置环境变量（可选）
 
 ```bash
-# 复制环境变量示例
-cp env.example .env
-
 # 编辑环境变量
 vim .env
 ```
@@ -208,12 +200,12 @@ erc20-scanner-*/
 │   └── config.yaml.example
 ├── logs/                # 日志目录（自动创建）
 ├── docker-compose.yml   # Docker Compose 配置（scanner + rpc）
-├── env/                 # 环境配置 + 数据库文件
+├── env/                 # 环境配置
 │   ├── docker-compose.yml   # MySQL Docker Compose 配置
-│   ├── schema.sql           # 数据库初始化脚本
-│   ├── migration_add_token_allowances.sql  # 升级脚本
-│   └── mysql.cnf            # MySQL 配置
-├── env.example          # 环境变量示例
+│   └── database/            # 数据库文件
+│       ├── schema.sql       # 数据库初始化脚本
+│       ├── migration_add_token_allowances.sql  # 升级脚本
+│       └── mysql.cnf        # MySQL 配置
 └── README.md            # 本文件
 ```
 
@@ -243,7 +235,7 @@ RPC_PORT=8080
 ### MySQL服务
 - **端口**: 3306
 - **数据持久化**: Docker卷 `mysql_data`
-- **自动初始化**: 启动时自动执行 `database/schema.sql`
+- **自动初始化**: 启动时自动执行 `env/database/schema.sql`
 
 ### Scanner服务
 - **功能**: 扫描区块链并写入数据库
@@ -433,7 +425,7 @@ echo "  - bin/scanner (扫描器)"
 echo "  - bin/rpc-server (RPC服务)"
 echo "  - docker-compose.yml (scanner + rpc 服务)"
 echo "  - env/docker-compose.yml (MySQL 服务)"
-echo "  - database/schema.sql (数据库初始化)"
+echo "  - env/database/ (数据库文件)"
 echo "  - config/ (配置文件)"
 echo "  - README.md (说明文档)"
 echo ""
