@@ -24,6 +24,7 @@ import (
 	"github.com/33cn/externaldb/erc20Scaner/config"
 	"github.com/33cn/externaldb/erc20Scaner/database"
 	"github.com/33cn/externaldb/erc20Scaner/erc20abi/generated"
+	"github.com/33cn/externaldb/erc20Scaner/txparser"
 	"github.com/33cn/externaldb/escli"
 )
 
@@ -749,97 +750,40 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 	isDirectTransfer := funcSelector == transferSelector || funcSelector == transferFromSelector
 	_ = isDirectTransfer // 可用于后续扩展，比如区分直接调用和间接触发
 
-	// 解析交易日志中的Transfer事件
-	parsedAbi, err := abi.JSON(strings.NewReader(generated.ERC20ABI))
+	// 使用共享解析器解析 Transfer 和 Approval 事件
+	rawTransfers, rawApprovals, err := txparser.ParseReceiptLogs(receipt.Logs)
 	if err != nil {
-		return fmt.Errorf("failed to parse ERC20 ABI: %w", err)
+		return fmt.Errorf("failed to parse receipt logs: %w", err)
 	}
 
-	// Transfer事件签名: Transfer(address indexed from, address indexed to, uint256 value)
-	transferEvent := parsedAbi.Events["Transfer"]
-	if transferEvent.ID == (common.Hash{}) {
-		return fmt.Errorf("transfer event not found in ABI")
-	}
-
-	// Approval事件签名: Approval(address indexed owner, address indexed spender, uint256 value)
-	approvalEvent := parsedAbi.Events["Approval"]
-
-	// 解析所有日志，查找Transfer和Approval事件
 	type TransferWithLogIndex struct {
 		TransferInfo
 		LogIndex uint
 	}
 	var transfers []TransferWithLogIndex
-	var approvals []ApprovalWithLogIndex
-	for logIndex, log := range receipt.Logs {
-		// 跳过已移除的日志
-		if log.Removed {
-			continue
-		}
-		// 检查日志主题数量（Transfer和Approval都有3个topics）
-		if len(log.Topics) < 3 {
-			continue
-		}
-
-		if log.Topics[0] == transferEvent.ID {
-			// Transfer事件: [event_hash, from, to] + data: value
-
-			// 从topics中提取from和to（它们是indexed参数）
-			from := common.BytesToAddress(log.Topics[1].Bytes())
-			to := common.BytesToAddress(log.Topics[2].Bytes())
-
-			// 从data中提取value（非indexed参数）
-			var value *big.Int
-			if len(log.Data) >= 32 {
-				value = new(big.Int).SetBytes(log.Data[:32])
-			} else {
-				continue
+	for _, rt := range rawTransfers {
+		tokenInfo, err := p.getTokenInfo(&rt.TokenAddress)
+		if err != nil {
+			tokenInfo = &TokenInfo{
+				Address:  rt.TokenAddress.Hex(),
+				Symbol:   "UNKNOWN",
+				Decimals: 18,
+				Name:     "Unknown Token",
 			}
-
-			// 获取代币信息
-			tokenAddress := log.Address
-			tokenInfo, err := p.getTokenInfo(&tokenAddress)
-			if err != nil {
-				tokenInfo = &TokenInfo{
-					Address:  tokenAddress.Hex(),
-					Symbol:   "UNKNOWN",
-					Decimals: 18,
-					Name:     "Unknown Token",
-				}
-			}
-
-			transfers = append(transfers, TransferWithLogIndex{
-				TransferInfo: TransferInfo{
-					TokenAddress: tokenAddress,
-					From:         from,
-					To:           to,
-					Value:        value,
-					TokenInfo:    *tokenInfo,
-				},
-				LogIndex: uint(logIndex),
-			})
-		} else if approvalEvent.ID != (common.Hash{}) && log.Topics[0] == approvalEvent.ID {
-			// Approval事件: [event_hash, owner, spender] + data: value
-
-			owner := common.BytesToAddress(log.Topics[1].Bytes())
-			spender := common.BytesToAddress(log.Topics[2].Bytes())
-
-			var value *big.Int
-			if len(log.Data) >= 32 {
-				value = new(big.Int).SetBytes(log.Data[:32])
-			} else {
-				continue
-			}
-
-			approvals = append(approvals, ApprovalWithLogIndex{
-				Owner:        owner,
-				Spender:      spender,
-				Value:        value,
-				TokenAddress: log.Address,
-				LogIndex:     uint(logIndex),
-			})
 		}
+		transfers = append(transfers, TransferWithLogIndex{
+			TransferInfo: TransferInfo{
+				TokenAddress: rt.TokenAddress,
+				From:         rt.From,
+				To:           rt.To,
+				Value:        rt.Value,
+				TokenInfo:    *tokenInfo,
+			},
+			LogIndex: rt.LogIndex,
+		})
 	}
+	var approvals []txparser.ParsedApproval
+	approvals = rawApprovals
 
 	// 如果没有找到Transfer事件，可能不是ERC20转账
 	if len(transfers) == 0 {
@@ -1115,7 +1059,7 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 }
 
 // saveApprovalEventToDB 保存 Approval 事件到 events 表
-func (p *Process) saveApprovalEventToDB(approval *ApprovalWithLogIndex, block *types.Block, txHash common.Hash) error {
+func (p *Process) saveApprovalEventToDB(approval *txparser.ParsedApproval, block *types.Block, txHash common.Hash) error {
 	if p.db == nil {
 		return fmt.Errorf("database not initialized")
 	}
@@ -1192,15 +1136,6 @@ func (p *Process) getBalanceFromContract(contractAddress, address *common.Addres
 		return big.NewInt(0), nil
 	}
 	return balance, nil
-}
-
-// ApprovalWithLogIndex Approval事件信息（含log index）
-type ApprovalWithLogIndex struct {
-	Owner        common.Address
-	Spender      common.Address
-	Value        *big.Int
-	TokenAddress common.Address
-	LogIndex     uint
 }
 
 // TransferInfo 转账信息

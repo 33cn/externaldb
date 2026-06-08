@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/33cn/externaldb/erc20Scaner/blockalign"
+	"github.com/33cn/externaldb/erc20Scaner/txparser"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -201,10 +202,8 @@ func (a *Analyzer) buildReport(tx *types.Transaction, receipt *types.Receipt, bl
 	}
 	rep.Transaction = ts
 
-	transferEventID, err := transferEventID()
-	if err != nil {
-		return nil, err
-	}
+	transferEventID := txparser.TransferEventID()
+	approvalEventID := txparser.ApprovalEventID()
 
 	for i, lg := range receipt.Logs {
 		lv := LogView{
@@ -220,6 +219,9 @@ func (a *Analyzer) buildReport(tx *types.Transaction, receipt *types.Receipt, bl
 		}
 		if len(lg.Topics) >= 3 && lg.Topics[0] == transferEventID {
 			lv.IsTransferEvent = true
+		}
+		if len(lg.Topics) >= 3 && approvalEventID != (common.Hash{}) && lg.Topics[0] == approvalEventID {
+			lv.IsApprovalEvent = true
 		}
 		rep.AllLogs = append(rep.AllLogs, lv)
 	}
@@ -237,11 +239,16 @@ func (a *Analyzer) buildReport(tx *types.Transaction, receipt *types.Receipt, bl
 		return rep, nil
 	}
 
-	ep := a.buildERC20Path(tx, receipt, block, transferEventID, fromAddr, blockTime, cst)
+	ep := a.buildERC20Path(tx, receipt, block, fromAddr, blockTime, cst)
 	if ep != nil {
 		rep.ERC20Path = ep
-	} else {
-		rep.ScannerSkipReason = strings.TrimSpace(rep.ScannerSkipReason + "; no ERC20 Transfer logs in receipt (scanner returns without DB writes for this tx)")
+	}
+	ap := a.buildApprovalPath(tx, receipt, block, blockTime, cst)
+	if ap != nil {
+		rep.ApprovalPath = ap
+	}
+	if ep == nil && ap == nil {
+		rep.ScannerSkipReason = strings.TrimSpace(rep.ScannerSkipReason + "; no ERC20 Transfer or Approval logs in receipt (scanner returns without DB writes for this tx)")
 	}
 
 	return rep, nil

@@ -7,11 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	"github.com/33cn/externaldb/erc20Scaner/erc20abi/generated"
+	"github.com/33cn/externaldb/erc20Scaner/txparser"
 )
 
 // Analyzer uses the same RPC and ABI calls as scanner Process.
@@ -38,6 +37,7 @@ type Report struct {
 	// Same paths as scanner
 	ContractCreation *ContractCreationView `json:"contractCreation,omitempty"`
 	ERC20Path        *ERC20PathView        `json:"erc20TransferPath,omitempty"`
+	ApprovalPath     *ApprovalPathView     `json:"approvalPath,omitempty"`
 
 	AllLogs []LogView `json:"allLogs"`
 }
@@ -94,6 +94,7 @@ type LogView struct {
 	TxIndex         uint     `json:"transactionIndex"`
 	BlockHash       string   `json:"blockHash"`
 	IsTransferEvent bool     `json:"isERC20TransferShape"`
+	IsApprovalEvent bool     `json:"isERC20ApprovalShape"`
 }
 
 // ContractCreationView matches handleContractCreation / save paths.
@@ -169,6 +170,29 @@ type TransferInspect struct {
 	BalanceErr  string  `json:"balanceQueryError,omitempty"`
 }
 
+// ApprovalPathView mirrors the Approval handling path (scanner saveApprovalEventToDB + updateAllowanceInDB).
+type ApprovalPathView struct {
+	Approvals         []ApprovalInspect `json:"approvals"`
+	DBEventPreview    *EventDBPreview   `json:"dbEventRowPreview,omitempty"`
+	DBAllowanceAction string            `json:"dbAllowanceAction,omitempty"` // "upsert" or "delete (revoke)"
+}
+
+// ApprovalInspect holds one parsed Approval event with token info.
+type ApprovalInspect struct {
+	LogIndex uint `json:"logIndex"`
+
+	TokenAddress string    `json:"tokenAddress"`
+	TokenInfo    TokenInfo `json:"tokenInfo"`
+
+	Owner   string `json:"owner"`
+	Spender string `json:"spender"`
+
+	AmountRaw       string `json:"amountRaw"`
+	AmountFormatted string `json:"amountFormatted"`
+
+	DBEventPreview *EventDBPreview `json:"dbEventRowPreview,omitempty"`
+}
+
 // TransactionDBPreview mirrors database.Transaction.
 type TransactionDBPreview struct {
 	TxHash          string `json:"tx_hash"`
@@ -206,8 +230,6 @@ type EventDBPreview struct {
 	Topic1          string `json:"topic1"`
 	Topic2          string `json:"topic2"`
 }
-
-var transferTopic0 = common.HexToHash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
 
 // Inspect loads tx, receipt, block and builds a Report.
 func (a *Analyzer) Inspect(txHash common.Hash) (*Report, error) {
@@ -270,18 +292,6 @@ func topicsHex(ts []common.Hash) []string {
 		out[i] = t.Hex()
 	}
 	return out
-}
-
-func transferEventID() (common.Hash, error) {
-	parsedAbi, err := abi.JSON(strings.NewReader(generated.ERC20ABI))
-	if err != nil {
-		return common.Hash{}, err
-	}
-	ev := parsedAbi.Events["Transfer"]
-	if ev.ID == (common.Hash{}) {
-		return common.Hash{}, fmt.Errorf("transfer event not in ABI")
-	}
-	return ev.ID, nil
 }
 
 func (a *Analyzer) buildContractCreationView(receipt *types.Receipt, block *types.Block, tx *types.Transaction, blockTime time.Time, cst *time.Location) *ContractCreationView {
@@ -372,7 +382,7 @@ func (a *Analyzer) buildContractCreationView(receipt *types.Receipt, block *type
 	return cv
 }
 
-func (a *Analyzer) buildERC20Path(tx *types.Transaction, receipt *types.Receipt, block *types.Block, transferEventID common.Hash, fromAddr common.Address, blockTime time.Time, cst *time.Location) *ERC20PathView {
+func (a *Analyzer) buildERC20Path(tx *types.Transaction, receipt *types.Receipt, block *types.Block, fromAddr common.Address, blockTime time.Time, cst *time.Location) *ERC20PathView {
 	txData := tx.Data()
 	if len(txData) < 4 {
 		return nil
@@ -381,6 +391,14 @@ func (a *Analyzer) buildERC20Path(tx *types.Transaction, receipt *types.Receipt,
 	transferSelector := "a9059cbb"
 	transferFromSelector := "23b872dd"
 	isDirectTransfer := funcSelector == transferSelector || funcSelector == transferFromSelector
+
+	rawTransfers, _, err := txparser.ParseReceiptLogs(receipt.Logs)
+	if err != nil {
+		return nil
+	}
+	if len(rawTransfers) == 0 {
+		return nil
+	}
 
 	type transferWithIdx struct {
 		token   common.Address
@@ -391,34 +409,19 @@ func (a *Analyzer) buildERC20Path(tx *types.Transaction, receipt *types.Receipt,
 		tokInfo TokenInfo
 	}
 	var transfers []transferWithIdx
-
-	for logIndex, lg := range receipt.Logs {
-		if lg.Removed || len(lg.Topics) < 3 || lg.Topics[0] != transferEventID {
-			continue
-		}
-		from := common.BytesToAddress(lg.Topics[1].Bytes())
-		to := common.BytesToAddress(lg.Topics[2].Bytes())
-		if len(lg.Data) < 32 {
-			continue
-		}
-		value := new(big.Int).SetBytes(lg.Data[:32])
-		tokenAddr := lg.Address
-		ti, err := a.getTokenInfo(&tokenAddr)
+	for _, rt := range rawTransfers {
+		ti, err := a.getTokenInfo(&rt.TokenAddress)
 		if err != nil {
-			ti = &TokenInfo{Address: tokenAddr.Hex(), Symbol: "UNKNOWN", Decimals: 18, Name: "Unknown Token"}
+			ti = &TokenInfo{Address: rt.TokenAddress.Hex(), Symbol: "UNKNOWN", Decimals: 18, Name: "Unknown Token"}
 		}
 		transfers = append(transfers, transferWithIdx{
-			token:   tokenAddr,
-			from:    from,
-			to:      to,
-			value:   value,
-			logIdx:  uint(logIndex),
+			token:   rt.TokenAddress,
+			from:    rt.From,
+			to:      rt.To,
+			value:   rt.Value,
+			logIdx:  rt.LogIndex,
 			tokInfo: *ti,
 		})
-	}
-
-	if len(transfers) == 0 {
-		return nil
 	}
 
 	out := &ERC20PathView{
@@ -460,7 +463,6 @@ func (a *Analyzer) buildERC20Path(tx *types.Transaction, receipt *types.Receipt,
 		})
 	}
 
-	// Note: scanner overwrites loop locals; last token wins for saveTransactionToDB
 	out.ScannerNote = "saveTransactionToDB in scanner uses funcName/funcSelector from the last iteration over distinct token contracts in the map (Go map iteration order varies)."
 
 	gasPrice := tx.GasPrice()
@@ -478,11 +480,11 @@ func (a *Analyzer) buildERC20Path(tx *types.Transaction, receipt *types.Receipt,
 
 	fromStr := ""
 	if fromAddr != (common.Address{}) {
-		fromStr = normalizeAddress(fromAddr.Hex())
+		fromStr = txparser.NormalizeAddress(fromAddr.Hex())
 	}
 	toStr := ""
 	if tx.To() != nil {
-		toStr = normalizeAddress(tx.To().Hex())
+		toStr = txparser.NormalizeAddress(tx.To().Hex())
 	}
 	valStr := ""
 	if calldataValue != nil {
@@ -506,7 +508,7 @@ func (a *Analyzer) buildERC20Path(tx *types.Transaction, receipt *types.Receipt,
 		TxIndex:         uint(receipt.TransactionIndex),
 		FromAddress:     fromStr,
 		ToAddress:       toStr,
-		ContractAddress: normalizeAddress(tx.To().Hex()),
+		ContractAddress: txparser.NormalizeAddress(tx.To().Hex()),
 		FuncSelector:    lastSel,
 		FuncName:        lastName,
 		Value:           valStr,
@@ -517,9 +519,9 @@ func (a *Analyzer) buildERC20Path(tx *types.Transaction, receipt *types.Receipt,
 		Status:          int8(receipt.Status),
 		TxData:          hex.EncodeToString(txData),
 	}
-	_ = lastDirect // documented via per-token rows
+	_ = lastDirect
 
-	topic0 := transferTopic0.Hex()
+	transferTopic0 := txparser.TransferEventID().Hex()
 	for _, tr := range transfers {
 		dec := big.NewInt(int64(tr.tokInfo.Decimals))
 		div := new(big.Int).Exp(big.NewInt(10), dec, nil)
@@ -531,13 +533,13 @@ func (a *Analyzer) buildERC20Path(tx *types.Transaction, receipt *types.Receipt,
 			BlockNumber:     block.NumberU64(),
 			BlockTime:       bt,
 			LogIndex:        tr.logIdx,
-			ContractAddress: normalizeAddress(tr.token.Hex()),
+			ContractAddress: txparser.NormalizeAddress(tr.token.Hex()),
 			EventName:       "Transfer",
-			EventSignature:  topic0,
-			FromAddress:     normalizeAddress(tr.from.Hex()),
-			ToAddress:       normalizeAddress(tr.to.Hex()),
+			EventSignature:  transferTopic0,
+			FromAddress:     txparser.NormalizeAddress(tr.from.Hex()),
+			ToAddress:       txparser.NormalizeAddress(tr.to.Hex()),
 			Value:           tr.value.String(),
-			Topic0:          topic0,
+			Topic0:          transferTopic0,
 			Topic1:          common.BytesToHash(tr.from.Bytes()).Hex(),
 			Topic2:          common.BytesToHash(tr.to.Bytes()).Hex(),
 		}
@@ -572,6 +574,64 @@ func (a *Analyzer) buildERC20Path(tx *types.Transaction, receipt *types.Receipt,
 			ToBalance:      toS,
 			BalanceErr:     strings.TrimSpace(balErr),
 		})
+	}
+
+	return out
+}
+
+// buildApprovalPath mirrors the Approval handling path (scanner saveApprovalEventToDB + updateAllowanceInDB).
+func (a *Analyzer) buildApprovalPath(tx *types.Transaction, receipt *types.Receipt, block *types.Block, blockTime time.Time, cst *time.Location) *ApprovalPathView {
+	_, rawApprovals, err := txparser.ParseReceiptLogs(receipt.Logs)
+	if err != nil || len(rawApprovals) == 0 {
+		return nil
+	}
+
+	bt := blockTime.In(cst).Format("2006-01-02 15:04:05")
+	approvalTopic0 := txparser.ApprovalEventID().Hex()
+
+	out := &ApprovalPathView{}
+	for _, ra := range rawApprovals {
+		ti, err := a.getTokenInfo(&ra.TokenAddress)
+		if err != nil {
+			ti = &TokenInfo{Address: ra.TokenAddress.Hex(), Symbol: "UNKNOWN", Decimals: 18, Name: "Unknown Token"}
+		}
+
+		dec := big.NewInt(int64(ti.Decimals))
+		div := new(big.Int).Exp(big.NewInt(10), dec, nil)
+		formatted := new(big.Float).Quo(new(big.Float).SetInt(ra.Value), new(big.Float).SetInt(div))
+
+		ev := &EventDBPreview{
+			TxHash:          tx.Hash().Hex(),
+			BlockNumber:     block.NumberU64(),
+			BlockTime:       bt,
+			LogIndex:        ra.LogIndex,
+			ContractAddress: txparser.NormalizeAddress(ra.TokenAddress.Hex()),
+			EventName:       "Approval",
+			EventSignature:  approvalTopic0,
+			FromAddress:     txparser.NormalizeAddress(ra.Owner.Hex()),
+			ToAddress:       txparser.NormalizeAddress(ra.Spender.Hex()),
+			Value:           ra.Value.String(),
+			Topic0:          approvalTopic0,
+			Topic1:          common.BytesToHash(ra.Owner.Bytes()).Hex(),
+			Topic2:          common.BytesToHash(ra.Spender.Bytes()).Hex(),
+		}
+
+		action := "upsert"
+		if ra.Value.Sign() == 0 {
+			action = "delete (revoke)"
+		}
+
+		out.Approvals = append(out.Approvals, ApprovalInspect{
+			LogIndex:        ra.LogIndex,
+			TokenAddress:    ra.TokenAddress.Hex(),
+			TokenInfo:       *ti,
+			Owner:           ra.Owner.Hex(),
+			Spender:         ra.Spender.Hex(),
+			AmountRaw:       ra.Value.String(),
+			AmountFormatted: formatted.Text('f', int(ti.Decimals)) + " " + ti.Symbol,
+			DBEventPreview:  ev,
+		})
+		out.DBAllowanceAction = action
 	}
 
 	return out
