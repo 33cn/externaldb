@@ -127,6 +127,11 @@ if [ -f "${SCRIPT_DIR}/database/schema.sql" ]; then
     echo -e "  ${GREEN}✓ database/schema.sql${NC}"
 fi
 
+if [ -f "${SCRIPT_DIR}/database/migration_add_token_allowances.sql" ]; then
+    cp "${SCRIPT_DIR}/database/migration_add_token_allowances.sql" "${PKG_DIR}/database/"
+    echo -e "  ${GREEN}✓ database/migration_add_token_allowances.sql${NC}"
+fi
+
 # 创建说明文档
 echo ""
 echo -e "${YELLOW}创建说明文档...${NC}"
