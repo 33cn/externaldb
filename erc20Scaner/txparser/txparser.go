@@ -33,6 +33,14 @@ type ParsedApproval struct {
 	LogIndex     uint
 }
 
+// MaxUint256 is 2^256 - 1, the value ERC20 uses for "unlimited" approval.
+var MaxUint256 = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(1))
+
+// IsUnlimitedApproval reports whether amount equals MaxUint256.
+func IsUnlimitedApproval(amount *big.Int) bool {
+	return amount != nil && amount.Cmp(MaxUint256) == 0
+}
+
 // NormalizeAddress lowercases an Ethereum address for storage/comparison.
 func NormalizeAddress(address string) string {
 	if address == "" {

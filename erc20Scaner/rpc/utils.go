@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+
+	"github.com/33cn/externaldb/erc20Scaner/txparser"
 )
 
 // writeJSON 写入JSON响应
@@ -39,6 +41,9 @@ func normalizeAddress(address string) string {
 func formatTokenAmount(amount *big.Int, decimals uint8) string {
 	if amount == nil {
 		return "0"
+	}
+	if txparser.IsUnlimitedApproval(amount) {
+		return "unlimited"
 	}
 	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimals)), nil)
 	quotient := new(big.Int).Div(amount, divisor)

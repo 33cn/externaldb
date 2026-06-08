@@ -597,9 +597,14 @@ func (a *Analyzer) buildApprovalPath(tx *types.Transaction, receipt *types.Recei
 			ti = &TokenInfo{Address: ra.TokenAddress.Hex(), Symbol: "UNKNOWN", Decimals: 18, Name: "Unknown Token"}
 		}
 
-		dec := big.NewInt(int64(ti.Decimals))
-		div := new(big.Int).Exp(big.NewInt(10), dec, nil)
-		formatted := new(big.Float).Quo(new(big.Float).SetInt(ra.Value), new(big.Float).SetInt(div))
+		var formatted string
+		if txparser.IsUnlimitedApproval(ra.Value) {
+			formatted = "unlimited"
+		} else {
+			dec := big.NewInt(int64(ti.Decimals))
+			div := new(big.Int).Exp(big.NewInt(10), dec, nil)
+			formatted = new(big.Float).Quo(new(big.Float).SetInt(ra.Value), new(big.Float).SetInt(div)).Text('f', int(ti.Decimals)) + " " + ti.Symbol
+		}
 
 		ev := &EventDBPreview{
 			TxHash:          tx.Hash().Hex(),
@@ -629,7 +634,7 @@ func (a *Analyzer) buildApprovalPath(tx *types.Transaction, receipt *types.Recei
 			Owner:           ra.Owner.Hex(),
 			Spender:         ra.Spender.Hex(),
 			AmountRaw:       ra.Value.String(),
-			AmountFormatted: formatted.Text('f', int(ti.Decimals)) + " " + ti.Symbol,
+			AmountFormatted: formatted,
 			DBEventPreview:  ev,
 		})
 		out.DBAllowanceAction = action
