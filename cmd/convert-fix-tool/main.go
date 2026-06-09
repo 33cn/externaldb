@@ -50,6 +50,8 @@ var (
 	log        = l.New("module", "main")
 	configPath = flag.String("f", "externaldb.toml", "config file")
 	chainPath  = flag.String("c", "", "chain33 or para node config file")
+	startSeq   = flag.Int64("start-seq", 0, "强制从指定seq开始处理（>0生效，跳过ES读取）")
+	endSeq     = flag.Int64("end-seq", 0, "强制处理到指定seq结束（>0生效）")
 )
 
 // 对比不同的合约有几个不同的点： 流程一样， 但流程的部分实现不一样
@@ -76,12 +78,12 @@ func main() {
 		symbol = "bty"
 	}
 	util.InitChain33(title, symbol, *chainPath)
-	util.SetupLog(cfg.Convert.GetAppName(), "debug")
+	util.SetupLog("convertfix", "debug")
 	util.InitMapSet(cfg.EsVersion, cfg.EsIndex)
 
 	log.Info("init config", "config", cfg)
 	log.Info("load config", "cfgPath", *configPath, "read_es", cfg.SyncEs.Host, "write_es", cfg.ConvertEs.Host)
-	convertfix.InitDB(cfg)
+	convertfix.InitDB(cfg, *startSeq, *endSeq)
 	// 启动服务
 	convertService := convertfix.NewConvertService(cfg)
 	log.Info("main   ", "init", "convertService")

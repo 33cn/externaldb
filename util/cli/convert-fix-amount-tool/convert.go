@@ -33,11 +33,11 @@ var (
 	SeqStore    store.SeqStore
 )
 
-func InitDB(cfg *proto.ConfigNew) {
+func InitDB(cfg *proto.ConfigNew, startSeqOverride, endSeqOverride int64) {
 	InitWriteDB(cfg.ConvertEs, cfg.EsVersion)
 	InitSeqStore(cfg)
 	log.Info("InitDB", "init seq from db", "begin")
-	InitSeqNum(cfg)
+	InitSeqNum(cfg, startSeqOverride, endSeqOverride)
 	log.Info("InitDB", "init seq from db", "end")
 	db.SetVersion(cfg.EsVersion)
 	db.SetAddrID(cfg.Convert.AddressDriver)
@@ -111,8 +111,16 @@ func InitSeqStore(cfg *proto.ConfigNew) {
 	}
 }
 
-func InitSeqNum(cfg *proto.ConfigNew) {
-	err := util.InitLastSyncSeqCacheFixTool(EsWrite, cfg.Convert.AppName, cfg.Sync.StartSeq)
+func InitSeqNum(cfg *proto.ConfigNew, startSeqOverride, endSeqOverride int64) {
+	if startSeqOverride > 0 {
+		util.FirstOne = startSeqOverride
+		log.Info("InitSeqNum", "FirstOne overridden", util.FirstOne)
+	}
+	if endSeqOverride > 0 {
+		util.LastOne = endSeqOverride
+		log.Info("InitSeqNum", "LastOne overridden", util.LastOne)
+	}
+	err := util.InitLastSyncSeqCacheFixTool(EsWrite, "convertfix", cfg.Sync.StartSeq)
 	if err != nil {
 		log.Error("初始化 区块解析进度参数 last_seq 失败，请确保ES服务正常且 配置文件参数sync.startSeq 参数大于或等于0")
 		panic(err)

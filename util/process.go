@@ -122,11 +122,11 @@ func (mod *ModuleConvert) BlockProc() {
 // BlockProc deal block 修复指定高度
 func (mod *ModuleConvert) BlockProcFixTool() {
 
-	syncSeqNum := lastOne
+	syncSeqNum := LastOne
 	//currentSeqNum, err := LastSyncSeq(mod.WriteDB, mod.Name)
 
 	var currentSeqNum int64
-	currentSeqNum = firstOne
+	currentSeqNum = FirstOne
 
 	//若seq记录未发生变化则不重复打印日志
 	if currentSeqN != currentSeqNum || syncSeqN != syncSeqNum {

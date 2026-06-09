@@ -15,8 +15,8 @@ type lastSyncSeqCache struct {
 }
 
 var (
-	lastOne  = int64(30000000) //  int64(41642275)
-	firstOne = int64(20000000) // 40049898
+	LastOne  = int64(46612200) //  int64(46612097)
+	FirstOne = int64(43380000) // 40049898
 
 	//againLast  = int64(30000000)
 	//againFirst = int64(20000000)
@@ -28,7 +28,7 @@ func InitLastSyncSeqCacheFixTool(client escli.ESClient, id string, startSeq int6
 	//currentSeqNum, err := LastSyncSeq(client, id)
 	var err error
 	_ = err
-	currentSeqNum := firstOne
+	currentSeqNum := FirstOne
 	if err != nil {
 		log.Error("InitLastSyncSeqCache failed", "err", err, "module", id)
 		return err
@@ -46,20 +46,28 @@ func InitLastSyncSeqCacheFixTool(client escli.ESClient, id string, startSeq int6
 }
 
 func InitLastSyncSeqCache(client escli.ESClient, id string, startSeq int64) error {
-	currentSeqNum, err := LastSyncSeq(client, id)
-	if err != nil {
-		log.Error("InitLastSyncSeqCache failed", "err", err, "module", id)
-		return err
-	}
-	if currentSeqNum == -1 {
-		log.Info("last_seq 从ES获取失败，自动使用配置文件sync.startSeq")
-	}
-	if currentSeqNum < startSeq {
+	var currentSeqNum int64
+	if startSeq > 0 {
+		// startSeq > 0 时直接使用配置值，跳过 ES 读取，避免启动时卡在 ES
 		currentSeqNum = startSeq - 1
+		log.Info("last_seq 使用配置值（跳过ES读取）", "startSeq", startSeq, "当前last_seq", currentSeqNum)
+	} else {
+		var err error
+		currentSeqNum, err = LastSyncSeq(client, id)
+		if err != nil {
+			log.Error("InitLastSyncSeqCache failed", "err", err, "module", id)
+			return err
+		}
+		if currentSeqNum == -1 {
+			log.Info("last_seq 从ES获取失败，自动使用配置文件sync.startSeq")
+		}
+		if currentSeqNum < startSeq {
+			currentSeqNum = startSeq - 1
+		}
+		log.Info("last_seq 处理成功", "当前last_seq ", currentSeqNum)
+		// 前面步骤，底层包在查询ES的last_seq不存在时，会输出ERROR错误日志，为了方便查看，这里也在ERROR的位置输出last_seq 处理成功, 便于理解
+		log.Error("ES last_seq 自动修复处理完毕", "当前last_seq ", currentSeqNum)
 	}
-	log.Info("last_seq 处理成功", "当前last_seq ", currentSeqNum)
-	// 前面步骤，底层包在查询ES的last_seq不存在时，会输出ERROR错误日志，为了方便查看，这里也在ERROR的位置输出last_seq 处理成功, 便于理解
-	log.Error("ES last_seq 自动修复处理完毕", "当前last_seq ", currentSeqNum)
 	return LastSyncSeqCache.SetNumber(currentSeqNum)
 }
 
