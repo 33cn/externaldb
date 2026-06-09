@@ -11,14 +11,12 @@ import (
 	"github.com/33cn/externaldb/db/account"
 	"github.com/33cn/externaldb/db/address"
 	"github.com/33cn/externaldb/db/block"
-	"github.com/33cn/externaldb/db/blockinfo"
 	"github.com/33cn/externaldb/db/contract"
 	"github.com/33cn/externaldb/db/contractverify"
 	"github.com/33cn/externaldb/db/pos33"
 	proofconfig "github.com/33cn/externaldb/db/proof_config"
 	"github.com/33cn/externaldb/escli"
 	"github.com/33cn/externaldb/proto"
-	"github.com/33cn/externaldb/stat"
 	"github.com/33cn/externaldb/store"
 	"github.com/33cn/externaldb/store/syncseq"
 	"github.com/33cn/externaldb/util"
@@ -130,13 +128,11 @@ type App struct {
 	title            string
 	defaultExec      string
 	dealOtherChainTx bool
-	savaBlockInfo    bool
 	execs            map[string]db.ExecConvert
-	stats            map[string]stat.Stat
 }
 
 func NewApp(cfg *proto.ConfigNew) *App {
-	a := &App{title: cfg.Chain.Title, savaBlockInfo: cfg.Convert.SaveBlockInfo, defaultExec: cfg.Convert.DefaultExec, dealOtherChainTx: cfg.Convert.DealOtherChain}
+	a := &App{title: cfg.Chain.Title, defaultExec: cfg.Convert.DefaultExec, dealOtherChainTx: cfg.Convert.DealOtherChain}
 	a.execs = make(map[string]db.ExecConvert)
 	for _, exec := range cfg.Convert.Data {
 		newConvert, _ := converts.Load(exec.Exec)
@@ -155,34 +151,7 @@ func NewApp(cfg *proto.ConfigNew) *App {
 		a.execs[exec.Exec] = convert
 	}
 
-	// 先放在这， 看是否有更好的位置，来初始化 account
 	account.Init(cfg.Chain.Title, cfg.Convert.ExecAddresses)
-
-	// 统计插件
-	a.stats = make(map[string]stat.Stat)
-	for _, statName := range cfg.Convert.Stat {
-		newStat, _ := converts.LoadStat(statName.Stat)
-		if newStat == nil {
-			panic("stat convert not exist: " + statName.Stat)
-		}
-		if cfg.Chain.Title == "bityuan" {
-			a.stats[statName.Stat] = newStat(cfg.Chain.Title, cfg.Chain.Symbol, -1, -1)
-		} else {
-			a.stats[statName.Stat] = newStat(cfg.Chain.Title, cfg.Chain.Symbol, cfg.Chain.OtherChainGenesis, cfg.Chain.PerBlockCoin)
-		}
-		err := a.stats[statName.Stat].InitDB(EsWrite)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	// 保存区块基本信息
-	if a.savaBlockInfo {
-		err := blockinfo.InitDB(EsWrite)
-		if err != nil {
-			panic(err)
-		}
-	}
 
 	return a
 }
@@ -235,26 +204,17 @@ func (a *App) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 		// 不支持的合约生成交易列表
 		convertName = a.defaultExec
 	}
-
-	log.Info("App.convert", "convertName", convertName)
-	if convertName != "evm" {
-		return nil, nil
-	}
 	execConvert, ok = a.execs[convertName]
 	if !ok {
 		return nil, nil
 	}
 
+	log.Info("App.convert", "convertName", convertName)
 	return execConvert.ConvertTx(env, op)
 }
 
+// RecoverStats satisfies util.AppConvert interface (no-op for fix tool).
 func (a *App) RecoverStats(client escli.ESClient, lastSeq int64) error {
-	for _, st := range a.stats {
-		err := st.Recover(client, lastSeq)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
