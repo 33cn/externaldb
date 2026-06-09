@@ -446,13 +446,29 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 				"chain33TxHash", c33TxHash)
 			continue
 		}
-		err := p.processTransactionWithReceipt(aligned[idx], block)
+		tx := aligned[idx]
+		err := p.processTransactionWithReceipt(tx, block)
 		if err != nil {
 			// 处理失败只打日志，不返回错误，避免上层对同一块反复重试形成死循环
-			log.Error("Failed to process transaction",
+			var c33TxHash string
+			if idx < len(detail.Block.Txs) {
+				c33TxHash = hexutil.Encode(detail.Block.Txs[idx].Hash())
+			}
+			log.Error("Failed to process transaction (ES mode)",
 				"err", err,
-				"txHash", aligned[idx].Hash().Hex(),
-				"block", block.NumberU64())
+				"height", detail.Block.Height,
+				"blockHash", block.Hash().Hex(),
+				"evmTxIndex", idx,
+				"ethTxHash", tx.Hash().Hex(),
+				"ethTxNonce", tx.Nonce(),
+				"ethTxTo", func() string {
+					if tx.To() != nil {
+						return tx.To().Hex()
+					}
+					return "<contract_create>"
+				}(),
+				"chain33TxHash", c33TxHash,
+			)
 		}
 	}
 
@@ -557,10 +573,19 @@ func (p *Process) ParaseBlock(block *types.Block) error {
 		err := p.processTransactionWithReceipt(tx, block)
 		if err != nil {
 			// 处理失败不影响其他交易的处理
-			log.Error("Failed to process transaction",
+			log.Error("Failed to process transaction (node mode)",
 				"err", err,
-				"txHash", tx.Hash().Hex(),
-				"block", block.NumberU64())
+				"height", block.NumberU64(),
+				"blockHash", block.Hash().Hex(),
+				"ethTxHash", tx.Hash().Hex(),
+				"ethTxNonce", tx.Nonce(),
+				"ethTxTo", func() string {
+					if tx.To() != nil {
+						return tx.To().Hex()
+					}
+					return "<contract_create>"
+				}(),
+			)
 		}
 	}
 	return nil
