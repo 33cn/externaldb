@@ -404,6 +404,12 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 			log.Error("Failed to align eth txs with chain33 block", "err", err, "height", detail.Block.Height)
 			return nil
 		}
+	} else {
+		// ethN == seqN: 两边交易数一致，直接使用 block 的交易列表
+		aligned = make([]*types.Transaction, ethN)
+		for i := 0; i < ethN; i++ {
+			aligned[i] = block.Transactions()[i]
+		}
 	}
 	if block.Transactions().Len() != len(detail.Block.Txs) {
 		log.Warn("chain33 seq tx count differs from eth_getBlock tx count",
