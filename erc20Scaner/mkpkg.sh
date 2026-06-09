@@ -51,7 +51,7 @@ echo -e "${GREEN}Go 版本: ${GO_VERSION}${NC}"
 # 创建构建目录
 echo ""
 echo -e "${YELLOW}创建构建目录...${NC}"
-mkdir -p "${PKG_DIR}"/{bin,config,logs,env/database}
+mkdir -p "${PKG_DIR}"/{bin,config,logs,env/database,base_image}
 
 # 编译应用
 echo ""
@@ -94,6 +94,18 @@ if [ -f "${SCRIPT_DIR}/deploy/docker-compose.yml" ]; then
 else
     echo -e "  ${RED}✗ deploy/docker-compose.yml 不存在${NC}"
     exit 1
+fi
+
+# 基础镜像构建文件 → base_image/
+if [ -f "${SCRIPT_DIR}/deploy/Dockerfile" ]; then
+    cp "${SCRIPT_DIR}/deploy/Dockerfile" "${PKG_DIR}/base_image/Dockerfile"
+    echo -e "  ${GREEN}✓ base_image/Dockerfile${NC}"
+fi
+
+if [ -f "${SCRIPT_DIR}/deploy/build-image.sh" ]; then
+    cp "${SCRIPT_DIR}/deploy/build-image.sh" "${PKG_DIR}/base_image/build-image.sh"
+    chmod +x "${PKG_DIR}/base_image/build-image.sh"
+    echo -e "  ${GREEN}✓ base_image/build-image.sh${NC}"
 fi
 
 # MySQL Docker Compose 文件 → env/docker-compose.yml
@@ -347,6 +359,7 @@ echo "包内容:"
 echo "  - bin/scanner (扫描器)"
 echo "  - bin/rpc-server (RPC服务)"
 echo "  - docker-compose.yml (scanner + rpc 服务)"
+echo "  - base_image/ (基础镜像 Dockerfile + 构建脚本)"
 echo "  - env/docker-compose.yml (MySQL 服务)"
 echo "  - env/database/ (数据库文件)"
 echo "  - config/ (配置文件)"
@@ -356,8 +369,9 @@ echo "部署步骤:"
 echo "  1. 复制 ${PKG_NAME} 到测试机器"
 echo "  2. 解压: tar -xzf ${PKG_NAME}"
 echo "  3. 进入目录: cd ${PROJECT_NAME}-${VERSION}"
-echo "  4. 启动 MySQL: docker-compose -f env/docker-compose.yml up -d"
-echo "  5. 启动服务: docker-compose up -d"
+echo "  4. 构建基础镜像: ./base_image/build-image.sh"
+echo "  5. 启动 MySQL: docker-compose -f env/docker-compose.yml up -d"
+echo "  6. 启动服务: docker-compose up -d"
 echo ""
 
 # 清理临时目录（保留打包文件）

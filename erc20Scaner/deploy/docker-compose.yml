@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # ERC20扫描器服务
   scanner:
-    image: alpine:latest
+    image: erc20-scanner-base:latest
     container_name: erc20-scanner
     restart: unless-stopped
     environment:
@@ -16,7 +16,6 @@ services:
     working_dir: /app
     command: >
       sh -c "
-        apk add --no-cache ca-certificates tzdata &&
         chmod +x /app/scanner &&
         /app/scanner -c /app/config.yaml
       "
@@ -28,7 +27,7 @@ services:
 
   # RPC API服务
   rpc:
-    image: alpine:latest
+    image: erc20-scanner-base:latest
     container_name: erc20-scanner-rpc
     restart: unless-stopped
     depends_on:
@@ -47,7 +46,6 @@ services:
     working_dir: /app
     command: >
       sh -c "
-        apk add --no-cache ca-certificates tzdata wget &&
         chmod +x /app/rpc-server &&
         /app/rpc-server -c /app/config.yaml
       "
@@ -61,4 +59,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
