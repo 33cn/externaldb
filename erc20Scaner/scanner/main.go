@@ -7,6 +7,7 @@ import (
 
 	"github.com/33cn/externaldb/erc20Scaner/config"
 	"github.com/33cn/externaldb/erc20Scaner/logger"
+	"github.com/33cn/externaldb/erc20Scaner/scanner/engine"
 	"github.com/33cn/externaldb/escli"
 
 	"log/slog"
@@ -34,6 +35,9 @@ func main() {
 		return
 	}
 
+	// 设置 engine 包的 logger
+	engine.SetLogger(log)
+
 	// 打印配置信息
 	logConfig(cfg, log)
 
@@ -42,13 +46,13 @@ func main() {
 }
 
 func initAndStart(cfg *config.Config) {
-	p := new(Process)
-	p.startPoint = uint64(cfg.Scanner.StartBlock)
-	p.endPoint = uint64(cfg.Scanner.EndBlock)
-	p.enableDB = cfg.Database.Enabled
-	p.dbDSN = cfg.Database.DSN
-	p.nodeURL = cfg.Node.URL
-	p.skipInlineBalanceUpdate = cfg.Scanner.SkipInlineBalanceUpdate
+	p := new(engine.Process)
+	p.StartPoint = uint64(cfg.Scanner.StartBlock)
+	p.EndPoint = uint64(cfg.Scanner.EndBlock)
+	p.EnableDB = cfg.Database.Enabled
+	p.DBDSN = cfg.Database.DSN
+	p.NodeURL = cfg.Node.URL
+	p.SkipInlineBalanceUpdate = cfg.Scanner.SkipInlineBalanceUpdate
 
 	// 如果启用了ES模式，优先使用ES读取区块
 	if cfg.ES.Enabled {
@@ -61,7 +65,7 @@ func initAndStart(cfg *config.Config) {
 		log.Info("ES connection established successfully")
 		p.Init()
 		if cfg.Database.Enabled && cfg.BalanceRefresher.Enabled {
-			go p.runBalanceRefresher(context.Background(), cfg.BalanceRefresher)
+			go p.RunBalanceRefresher(context.Background(), cfg.BalanceRefresher)
 		}
 		defer p.Close()
 		p.StartWithEsClient(esClient)
@@ -70,7 +74,7 @@ func initAndStart(cfg *config.Config) {
 		log.Info("Node mode enabled", "url", cfg.Node.URL)
 		p.Init()
 		if cfg.Database.Enabled && cfg.BalanceRefresher.Enabled {
-			go p.runBalanceRefresher(context.Background(), cfg.BalanceRefresher)
+			go p.RunBalanceRefresher(context.Background(), cfg.BalanceRefresher)
 		}
 		defer p.Close()
 		p.Start()

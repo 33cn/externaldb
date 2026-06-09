@@ -16,6 +16,7 @@ help:
 	@echo "  make bins - Static-build scanner, rpc-server, txinfo, blockparse -> ./bin/"
 	@echo "  make static     - Same as bins (alias)"
 	@echo "  make scanner    - Static-build ./bin/scanner"
+	@echo "  make scannerfix - Static-build ./bin/scannerfix"
 	@echo "  make rpc-server - Static-build ./bin/rpc-server"
 	@echo "  make txinfo     - Static-build ./bin/txinfo"
 	@echo "  make blockparse - Static-build ./bin/blockparse (parse one block by height)"
@@ -37,7 +38,10 @@ bin:
 	@mkdir -p bin
 
 scanner: bin
-	$(GO_BUILD) -o bin/scanner ./scanner/*.go
+	$(GO_BUILD) -o bin/scanner ./scanner/
+
+scannerfix: bin
+	$(GO_BUILD) -o bin/scannerfix ./cmd/scannerfix/
 
 rpc-server: bin
 	$(GO_BUILD) -o bin/rpc-server ./rpc/*.go
@@ -48,8 +52,8 @@ txinfo: bin
 blockparse: bin
 	$(GO_BUILD) -o bin/blockparse ./cmd/blockparse/
 
-bins: scanner rpc-server txinfo blockparse
-	@echo "Built (static, CGO_ENABLED=0): bin/scanner bin/rpc-server bin/txinfo bin/blockparse"
+bins: scanner rpc-server txinfo blockparse scannerfix
+	@echo "Built (static, CGO_ENABLED=0): bin/scanner bin/rpc-server bin/txinfo bin/blockparse bin/scannerfix"
 
 static: bins
 

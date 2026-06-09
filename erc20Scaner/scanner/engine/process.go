@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"context"
@@ -44,15 +44,18 @@ func normalizeAddress(address string) string {
 // Process 业务处理模块
 type Process struct {
 	cli        *Client
-	startPoint uint64
-	endPoint   uint64
-	enableDB   bool
-	dbDSN      string
+	StartPoint uint64
+	EndPoint   uint64
+	EnableDB   bool
+	DBDSN      string
 	db         *database.DB
-	nodeURL    string
+	NodeURL    string
 	esClient   escli.ESClient // ES客户端，用于从ES读取区块
 
-	skipInlineBalanceUpdate bool // 为 true 时不扫块内联 balanceOf，依赖占位行 + balance_refresher
+	SkipInlineBalanceUpdate bool // 为 true 时不扫块内联 balanceOf，依赖占位行 + balance_refresher
+
+	// NoProgress 为 true 时不读/写 scan_progress 表（修复模式，方案 D）
+	NoProgress bool
 
 	// esResumeHeight：已处理完成的链上区块高度（用于 ES 模式 seq/height 对齐，仅 ES 路径使用）
 	esResumeHeight uint64
@@ -63,29 +66,34 @@ func (p *Process) Init() {
 	if p.cli == nil {
 		p.cli = new(Client)
 	}
-	p.cli.ConnectEth(p.nodeURL)
+	p.cli.ConnectEth(p.NodeURL)
 
 	// 初始化数据库连接
-	if p.enableDB {
+	if p.EnableDB {
 		var err error
-		p.db, err = database.NewDB(p.dbDSN)
+		p.db, err = database.NewDB(p.DBDSN)
 		if err != nil {
 			log.Error("Failed to connect to database, database write will be disabled", "err", err)
-			p.enableDB = false
+			p.EnableDB = false
 		} else {
 			log.Info("Database connection established successfully")
-			// 读取上次处理的进度
-			progress, err := p.db.GetScanProgress()
-			if err != nil {
-				log.Warn("Failed to get scan progress, will start from configured start point", "err", err, "startPoint", p.startPoint)
-			} else if progress != nil {
-				// 如果存在进度记录，从上次处理的高度+1开始
-				p.startPoint = progress.LastBlockNumber + 1
-				log.Info("Resuming scan from last processed block",
-					"lastBlock", progress.LastBlockNumber,
-					"startBlock", p.startPoint)
+			if p.NoProgress {
+				log.Info("NoProgress mode: skipping scan_progress read, using configured start point",
+					"startPoint", p.StartPoint)
 			} else {
-				log.Info("No previous progress found, starting from configured start point", "startPoint", p.startPoint)
+				// 读取上次处理的进度
+				progress, err := p.db.GetScanProgress()
+				if err != nil {
+					log.Warn("Failed to get scan progress, will start from configured start point", "err", err, "startPoint", p.StartPoint)
+				} else if progress != nil {
+					// 如果存在进度记录，从上次处理的高度+1开始
+					p.StartPoint = progress.LastBlockNumber + 1
+					log.Info("Resuming scan from last processed block",
+						"lastBlock", progress.LastBlockNumber,
+						"startBlock", p.StartPoint)
+				} else {
+					log.Info("No previous progress found, starting from configured start point", "startPoint", p.StartPoint)
+				}
 			}
 		}
 	}
@@ -97,23 +105,23 @@ const esSeqHeightSmallDrift = 100
 // alignESScanStart 解决：进度存的是 block height，而 ES 文档 id 为 sync_seq（通常 seq>=height；回滚后 seq 会继续增加）。
 // 探测一次 seq=lastH+1 的文档，取 d = SyncSeq - height，将下一条 ES 键设为 (lastH+1)+d，与链上下一块高度对齐。
 func (p *Process) alignESScanStart() {
-	if !p.enableDB || p.db == nil {
-		if p.startPoint > 0 {
-			p.esResumeHeight = p.startPoint - 1
+	if p.NoProgress || !p.EnableDB || p.db == nil {
+		if p.StartPoint > 0 {
+			p.esResumeHeight = p.StartPoint - 1
 		}
 		return
 	}
 	progress, err := p.db.GetScanProgress()
 	if err != nil {
 		log.Warn("ES align: get scan progress", "err", err)
-		if p.startPoint > 0 {
-			p.esResumeHeight = p.startPoint - 1
+		if p.StartPoint > 0 {
+			p.esResumeHeight = p.StartPoint - 1
 		}
 		return
 	}
 	if progress == nil || progress.LastBlockNumber == 0 {
-		if p.startPoint > 0 {
-			p.esResumeHeight = p.startPoint - 1
+		if p.StartPoint > 0 {
+			p.esResumeHeight = p.StartPoint - 1
 		}
 		return
 	}
@@ -138,13 +146,13 @@ func (p *Process) alignESScanStart() {
 	S := int64(probe.SyncSeq)
 	delta := S - H
 	// 下一块链高 lastH+1 对应的 ES 键约为 (lastH+1) + delta
-	p.startPoint = uint64(int64(lastH+1) + delta)
+	p.StartPoint = uint64(int64(lastH+1) + delta)
 	log.Info("ES scan start aligned",
 		"lastBlockHeight", lastH,
 		"probeSyncSeq", S,
 		"probeHeight", H,
 		"delta_seq_minus_height", delta,
-		"nextESSeq", p.startPoint)
+		"nextESSeq", p.StartPoint)
 }
 
 // StartWithEsClient 从ES读取区块并处理evm交易
@@ -153,15 +161,19 @@ func (p *Process) StartWithEsClient(esClient escli.ESClient) {
 	p.alignESScanStart()
 	for {
 		// 检查是否到达结束点
-		if p.endPoint > 0 && p.startPoint >= uint64(p.endPoint) {
+		if p.EndPoint > 0 && p.StartPoint >= uint64(p.EndPoint) {
+			if p.NoProgress {
+				log.Info("scannerfix completed (ES mode)", "endBlock", p.EndPoint, "lastSeq", p.StartPoint)
+				return
+			}
 			time.Sleep(time.Second)
 			continue
 		}
 
 		// 从ES读取区块
-		blockSeq, err := p.getBlockFromES(int64(p.startPoint))
+		blockSeq, err := p.getBlockFromES(int64(p.StartPoint))
 		if err != nil {
-			log.Warn("Failed to get block from ES", "err", err, "seq", p.startPoint)
+			log.Warn("Failed to get block from ES", "err", err, "seq", p.StartPoint)
 			time.Sleep(time.Second)
 			continue
 		}
@@ -174,7 +186,7 @@ func (p *Process) StartWithEsClient(esClient escli.ESClient) {
 
 		var detail chain33types.BlockDetail
 		if err := chain33types.Decode(blockSeq.BlockDetail, &detail); err != nil {
-			log.Error("Failed to decode BlockDetail from ES", "err", err, "seq", p.startPoint)
+			log.Error("Failed to decode BlockDetail from ES", "err", err, "seq", p.StartPoint)
 			time.Sleep(time.Second)
 			continue
 		}
@@ -198,7 +210,7 @@ func (p *Process) StartWithEsClient(esClient escli.ESClient) {
 					"wantHeight", want, "haveHeight", have,
 					"syncSeq", blockSeq.SyncSeq, "delta_seq_minus_height", delta,
 					"nextESSeq", uint64(targetSeq))
-				p.startPoint = uint64(targetSeq)
+				p.StartPoint = uint64(targetSeq)
 				continue
 			}
 			// |delta| 较小时直接按当前块处理，一般区块量小、很快可追上
@@ -209,13 +221,13 @@ func (p *Process) StartWithEsClient(esClient escli.ESClient) {
 
 		err = p.parseBlockFromES(blockSeq)
 		if err != nil {
-			log.Error("Failed to parse block from ES", "err", err, "seq", p.startPoint)
+			log.Error("Failed to parse block from ES", "err", err, "seq", p.StartPoint)
 			time.Sleep(time.Second)
 			continue
 		}
 
 		// 更新处理进度（存链上高度，非 ES 的 sync_seq）
-		if p.enableDB && p.db != nil {
+		if !p.NoProgress && p.EnableDB && p.db != nil {
 			blockTime := time.Unix(int64(detail.Block.BlockTime), 0)
 			err = p.db.UpdateScanProgress(
 				have,
@@ -229,7 +241,7 @@ func (p *Process) StartWithEsClient(esClient escli.ESClient) {
 		}
 		p.esResumeHeight = have
 		// 游标按 sync_seq 递增，避免把「高度」当 ES 文档 id
-		p.startPoint = uint64(int64(blockSeq.SyncSeq) + 1)
+		p.StartPoint = uint64(int64(blockSeq.SyncSeq) + 1)
 	}
 }
 
@@ -241,28 +253,32 @@ func (p *Process) Start() {
 			time.Sleep(time.Second)
 			continue
 		}
-		if blockNum < p.startPoint {
+		if blockNum < p.StartPoint {
 			time.Sleep(time.Second)
 			continue
 		}
-		if p.endPoint > 0 && blockNum >= p.endPoint {
+		if p.EndPoint > 0 && blockNum >= p.EndPoint {
+			if p.NoProgress {
+				log.Info("scannerfix completed (node mode)", "endBlock", p.EndPoint, "lastNum", p.StartPoint)
+				return
+			}
 			time.Sleep(time.Second)
 			continue
 		}
 
-		block, err := p.cli.BlockByNumber(p.startPoint)
+		block, err := p.cli.BlockByNumber(p.StartPoint)
 		if err != nil {
-			log.Error("Failed to get block by number", "err", err, "block", p.startPoint)
+			log.Error("Failed to get block by number", "err", err, "block", p.StartPoint)
 			continue
 		}
 		err = p.ParaseBlock(block)
 		if err != nil {
-			log.Error("Failed to parse block", "err", err, "block", p.startPoint)
+			log.Error("Failed to parse block", "err", err, "block", p.StartPoint)
 			continue
 		}
 
 		// 更新处理进度
-		if p.enableDB && p.db != nil {
+		if !p.NoProgress && p.EnableDB && p.db != nil {
 			blockTime := time.Unix(int64(block.Time()), 0)
 			err = p.db.UpdateScanProgress(
 				block.NumberU64(),
@@ -271,11 +287,11 @@ func (p *Process) Start() {
 				0, // processed_tx_count 可以根据需要统计
 			)
 			if err != nil {
-				log.Error("Failed to update scan progress", "err", err, "block", p.startPoint)
+				log.Error("Failed to update scan progress", "err", err, "block", p.StartPoint)
 			}
 		}
 
-		p.startPoint++
+		p.StartPoint++
 	}
 
 }
@@ -288,6 +304,11 @@ func (p *Process) Close() error {
 		return p.db.Close()
 	}
 	return nil
+}
+
+// BlockByNumber delegates to Client.BlockByNumber for testing/inspection.
+func (p *Process) BlockByNumber(number uint64) (*types.Block, error) {
+	return p.cli.BlockByNumber(number)
 }
 
 // getBlockFromES 从ES获取区块
@@ -397,7 +418,7 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 	}
 
 	log.Debug("Processing block transactions",
-		"startPoint", p.startPoint,
+		"startPoint", p.StartPoint,
 		"height", detail.Block.Height,
 		"txCount", len(aligned))
 	for _, idx := range evmtxs {
@@ -490,7 +511,7 @@ func (p *Process) handleContractCreation(tx *types.Transaction, receipt *types.R
 		"block", block.NumberU64())
 
 	// 写入数据库
-	if p.enableDB {
+	if p.EnableDB {
 		err = p.saveContractToDB(receipt, block, tx, cname, symbol, decimals, supply)
 		if err != nil {
 			log.Error("Failed to save contract to database",
@@ -518,7 +539,7 @@ func (p *Process) ParaseBlock(block *types.Block) error {
 	txs := block.Transactions()
 
 	log.Debug("Processing block transactions",
-		"startPoint", p.startPoint,
+		"startPoint", p.StartPoint,
 		"height", block.NumberU64(),
 		"txCount", len(txs))
 	for _, tx := range txs {
@@ -842,7 +863,7 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 	}
 
 	// 写入数据库
-	if p.enableDB {
+	if p.EnableDB {
 		// 收集所有不同的ERC20合约地址
 		contractAddresses := make(map[common.Address]bool)
 		for _, transfer := range transfers {
@@ -974,7 +995,7 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 					"token", transfer.TokenAddress.Hex())
 			}
 
-			if p.skipInlineBalanceUpdate {
+			if p.SkipInlineBalanceUpdate {
 				if err := p.touchBalanceRowInDB(transfer.From, transfer.TokenAddress, tx.Hash(), block.NumberU64()); err != nil {
 					log.Error("Failed to touch from balance row",
 						"err", err,
@@ -1016,7 +1037,7 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 	}
 
 	// 处理 Approval 事件：保存到 events 表和 token_allowances 表
-	if p.enableDB {
+	if p.EnableDB {
 		for _, approval := range approvals {
 			// 保存 Approval 事件
 			err := p.saveApprovalEventToDB(&approval, block, tx.Hash())
@@ -1538,7 +1559,7 @@ func (p *Process) touchBalanceRowInDB(address, contractAddress common.Address, t
 }
 
 // runBalanceRefresher 定时从链上 balanceOf 刷新 token_balances（仅更新 balance 与 last_updated_at）
-func (p *Process) runBalanceRefresher(ctx context.Context, br config.BalanceRefresherConfig) {
+func (p *Process) RunBalanceRefresher(ctx context.Context, br config.BalanceRefresherConfig) {
 	interval, minAge, err := br.ParseBalanceRefresherDurations()
 	if err != nil {
 		log.Error("balance_refresher: invalid duration config", "err", err)

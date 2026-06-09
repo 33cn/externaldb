@@ -60,11 +60,21 @@ echo -e "${YELLOW}编译应用...${NC}"
 # 编译 Scanner
 echo "  编译 scanner..."
 cd "${SCRIPT_DIR}"
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o "${PKG_DIR}/bin/scanner" ./scanner/*.go
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o "${PKG_DIR}/bin/scanner" ./scanner/
 if [ $? -eq 0 ]; then
     echo -e "  ${GREEN}✓ scanner 编译成功${NC}"
 else
     echo -e "  ${RED}✗ scanner 编译失败${NC}"
+    exit 1
+fi
+
+# 编译 ScannerFix
+echo "  编译 scannerfix..."
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o "${PKG_DIR}/bin/scannerfix" ./cmd/scannerfix/
+if [ $? -eq 0 ]; then
+    echo -e "  ${GREEN}✓ scannerfix 编译成功${NC}"
+else
+    echo -e "  ${RED}✗ scannerfix 编译失败${NC}"
     exit 1
 fi
 

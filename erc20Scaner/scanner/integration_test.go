@@ -8,6 +8,7 @@ package main
 import (
 	"testing"
 
+	"github.com/33cn/externaldb/erc20Scaner/scanner/engine"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -16,7 +17,7 @@ func testNodeURL() string {
 }
 
 func TestClient_BlockNum(t *testing.T) {
-	cli := new(Client)
+	cli := new(engine.Client)
 	cli.ConnectEth(testNodeURL())
 	t.Cleanup(func() { cli.CloseConnect() })
 
@@ -28,7 +29,7 @@ func TestClient_BlockNum(t *testing.T) {
 }
 
 func TestClient_BlockByNumber(t *testing.T) {
-	cli := new(Client)
+	cli := new(engine.Client)
 	cli.ConnectEth(testNodeURL())
 	t.Cleanup(func() { cli.CloseConnect() })
 
@@ -47,13 +48,13 @@ func TestClient_BlockByNumber(t *testing.T) {
 }
 
 func TestParseBlock_Integration(t *testing.T) {
-	p := new(Process)
-	p.nodeURL = testNodeURL()
+	p := new(engine.Process)
+	p.NodeURL = testNodeURL()
 	p.Init()
 	t.Cleanup(func() { _ = p.Close() })
 
 	const blockNum = uint64(34562329)
-	block, err := p.cli.BlockByNumber(blockNum)
+	block, err := p.BlockByNumber(blockNum)
 	if err != nil {
 		t.Fatal(err)
 	}
