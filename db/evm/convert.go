@@ -214,14 +214,14 @@ func (c *Convert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 		}
 	}
 
-	params, err := c.parseParam(ct.ParsedAbi, payload.Para, mapinfo)
-	if err != nil {
+	if _, err := c.parseParam(ct.ParsedAbi, payload.Para, mapinfo); err != nil {
 		log.Warn("ConvertTx.evm:parseParam", "err", err)
 	}
-	txOption.Params = params
+	// txOption.Params 不写入 options.params，避免大数值溢出
 
 	events := c.parseEvent(ct.ParsedAbi, mapinfo, eventLogs)
-	txOption.Events = events
+	// 不写入 txOption.Events/Transfers/Params，避免 uint256 数值超过 ES long 范围
+	// 事件/Transfer 详情通过 event handle（如 erc20.Transfer）写入独立 evm_transfer 索引
 
 	// 指定合约调用处理
 	callFuncName := convert.ToString(mapinfo["call_func_name"])
@@ -270,8 +270,7 @@ func (c *Convert) ConvertTx(env *db.TxEnv, op int) ([]db.Record, error) {
 	}
 
 	txOption.ContractType = contractType
-	txOption.TokenID = tokenID
-	txOption.Transfers = transfers
+	// txOption.TokenID / txOption.Transfers 不写入 options，避免 Transfer.Amount int64 溢出
 	txOption.CallFunName = callFuncName
 
 	// 合约数量统计
