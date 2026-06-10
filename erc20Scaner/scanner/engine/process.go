@@ -1128,7 +1128,7 @@ func (p *Process) saveApprovalEventToDB(approval *txparser.ParsedApproval, block
 		EventSignature:  approvalEventSig.Hex(),
 		OwnerAddress:    normalizeAddress(approval.Owner.Hex()),
 		SpenderAddress:  normalizeAddress(approval.Spender.Hex()),
-		Amount:          approval.Value,
+		Amount:          normalizeApprovalAmount(approval.Value),
 		Topic0:          approvalEventSig.Hex(),
 		Topic1:          common.BytesToHash(approval.Owner.Bytes()).Hex(),
 		Topic2:          common.BytesToHash(approval.Spender.Bytes()).Hex(),
@@ -1158,7 +1158,7 @@ func (p *Process) updateAllowanceInDB(owner, spender, contractAddress common.Add
 		normalizeAddress(owner.Hex()),
 		normalizeAddress(spender.Hex()),
 		normalizeAddress(contractAddress.Hex()),
-		amount,
+		normalizeApprovalAmount(amount),
 		txHash.Hex(),
 		blockNumber,
 	)
@@ -1562,6 +1562,17 @@ func (p *Process) saveEventToDB(transfer *TransferInfo, block *types.Block, txHa
 }
 
 // updateBalanceInDB 更新地址余额到数据库
+
+// normalizeApprovalAmount converts MaxUint256 (unlimited approval) to -1
+// so it fits in MySQL DECIMAL(65,0). ERC20 uses MaxUint256 as sentinel for
+// "unlimited allowance"; we use -1 for the same purpose.
+func normalizeApprovalAmount(amount *big.Int) *big.Int {
+	if txparser.IsUnlimitedApproval(amount) {
+		return big.NewInt(-1)
+	}
+	return amount
+}
+
 func (p *Process) updateBalanceInDB(address, contractAddress common.Address, balance *big.Int, txHash common.Hash, blockNumber uint64) error {
 	if p.db == nil {
 		return fmt.Errorf("database not initialized")
