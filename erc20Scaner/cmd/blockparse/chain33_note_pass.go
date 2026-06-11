@@ -123,7 +123,11 @@ func runChain33NotePass(grpcAddr string, height int64) *chain33NoteReport {
 			out.Items = append(out.Items, item)
 			continue
 		}
-		raw, err := hexutil.Decode(strings.TrimSpace(note))
+		note = strings.TrimSpace(note)
+		if !strings.HasPrefix(note, "0x") && !strings.HasPrefix(note, "0X") {
+			note = "0x" + note
+		}
+		raw, err := hexutil.Decode(note)
 		if err != nil {
 			item.Error = "decode note hex: " + err.Error()
 			out.Items = append(out.Items, item)
