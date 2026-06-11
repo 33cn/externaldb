@@ -198,7 +198,7 @@ func printChain33NotePass(n *chain33NoteReport) {
 		return
 	}
 	for _, it := range n.Items {
-		fmt.Printf("\n--- [c33:%d] chain33_tx=%s execer=%s ---\n", it.Index, it.Chain33TxHash, it.Execer)
+		fmt.Printf("\n--- [c33:%d] chain33_tx=%s execer=%s nonce=%d ---\n", it.Index, it.Chain33TxHash, it.Execer, it.Nonce)
 		if it.Skipped != "" {
 			fmt.Printf("Skipped: %s\n", it.Skipped)
 			continue
