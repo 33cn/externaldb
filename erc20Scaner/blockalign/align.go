@@ -3,6 +3,7 @@ package blockalign
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
@@ -62,6 +63,10 @@ func AlignEthTxsByNonce(block *types.Block, expects []SlotEthExpect) ([]*types.T
 		}
 		cands = append(cands, candView{tx: tx, nonce: tx.Nonce(), fromHex: from.Hex()})
 	}
+
+	// 按 nonce 排序；parachain 交易混入时 ETH 区块中 nonce 不保证单调递增，
+	// 排序后 forward-only scan 才能正确匹配
+	sort.Slice(cands, func(i, j int) bool { return cands[i].nonce < cands[j].nonce })
 
 	out := make([]*types.Transaction, len(expects))
 	scan := 0
