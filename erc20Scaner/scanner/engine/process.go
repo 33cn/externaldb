@@ -1035,6 +1035,14 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 
 		// 保存每个Transfer事件并更新余额
 		for _, transfer := range transfers {
+			// 过滤零地址 token
+			if transfer.TokenAddress == (common.Address{}) {
+				log.Warn("Skipping Transfer event with zero token address",
+					"txHash", tx.Hash().Hex(),
+					"from", transfer.From.Hex(),
+					"to", transfer.To.Hex())
+				continue
+			}
 			// 保存事件（使用实际的log index）
 			err := p.saveEventToDB(&transfer.TransferInfo, block, tx.Hash(), transfer.LogIndex)
 			if err != nil {
@@ -1097,6 +1105,14 @@ func (p *Process) parseERC20Transfer(tx *types.Transaction, receipt *types.Recei
 	// 处理 Approval 事件：保存到 events 表和 token_allowances 表
 	if p.EnableDB {
 		for _, approval := range approvals {
+			// 过滤零地址 token（chain33 系统合约或异常事件）
+			if approval.TokenAddress == (common.Address{}) {
+				log.Warn("Skipping Approval event with zero token address",
+					"txHash", tx.Hash().Hex(),
+					"owner", approval.Owner.Hex(),
+					"spender", approval.Spender.Hex())
+				continue
+			}
 			// 保存 Approval 事件
 			err := p.saveApprovalEventToDB(&approval, block, tx.Hash())
 			if err != nil {
