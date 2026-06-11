@@ -38,21 +38,6 @@ func extractFuncFromTxData(data []byte) (selector, name string) {
 	return "0x" + hex.EncodeToString(data[:4]), "unknown"
 }
 
-
-// allEVMNil checks whether all EVM slots are nil after nonce alignment,
-// indicating chain33 random nonces don't match ETH sequential nonces.
-func allEVMNil(aligned []*types.Transaction, evmtxs []int) bool {
-	if len(evmtxs) == 0 {
-		return false
-	}
-	for _, idx := range evmtxs {
-		if idx >= 0 && idx < len(aligned) && aligned[idx] != nil {
-			return false
-		}
-	}
-	return true
-}
-
 // normalizeAddress 规范化地址，统一转换为小写
 // 以太坊地址是大小写不敏感的，统一转换为小写便于比较和查询
 func normalizeAddress(address string) string {
@@ -423,16 +408,6 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 			"chain33TxCount", seqN,
 			"ethBlockTxCount", ethN,
 		)
-		// chain33 parachain nonce 为随机数，与 ETH 顺序 nonce 不匹配时 fallback 到 index-based
-		if allEVMNil(aligned, evmtxs) {
-			log.Info("Nonce alignment left all EVM slots nil, falling back to index-based",
-				"height", detail.Block.Height)
-			aligned, err = blockalign.AlignEthTxsWithSeqCount(block, seqN, p.cli)
-			if err != nil {
-				log.Error("Failed to align eth txs by index", "err", err, "height", detail.Block.Height)
-				return nil
-			}
-		}
 	} else if ethN > seqN {
 		aligned, err = blockalign.AlignEthTxsWithSeqCount(block, seqN, p.cli)
 		if err != nil {
