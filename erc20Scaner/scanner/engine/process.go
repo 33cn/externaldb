@@ -454,7 +454,7 @@ func (p *Process) parseBlockFromES(blockSeq *block.Seq) error {
 			if idx < len(detail.Block.Txs) {
 				c33TxHash = hexutil.Encode(detail.Block.Txs[idx].Hash())
 			}
-			log.Error("Failed to process transaction (ES mode)",
+			log.Warn("Failed to process transaction (ES mode), may be chain33 tx",
 				"err", err,
 				"height", detail.Block.Height,
 				"blockHash", block.Hash().Hex(),
@@ -573,7 +573,7 @@ func (p *Process) ParaseBlock(block *types.Block) error {
 		err := p.processTransactionWithReceipt(tx, block)
 		if err != nil {
 			// 处理失败不影响其他交易的处理
-			log.Error("Failed to process transaction (node mode)",
+			log.Warn("Failed to process transaction (node mode), may be chain33 tx",
 				"err", err,
 				"height", block.NumberU64(),
 				"blockHash", block.Hash().Hex(),
