@@ -120,7 +120,7 @@ func printHuman(b *txinspect.BlockReport) {
 			if r.Receipt != nil {
 				logs = r.Receipt.LogsCount
 			}
-			fmt.Printf("From: %s  To: %s  logs: %d\n", t.From, nullStr(t.To), logs)
+			fmt.Printf("From: %s  To: %s  nonce: %d  gas: %d  logs: %d\n", t.From, nullStr(t.To), t.Nonce, t.Gas, logs)
 		}
 		if r.ContractCreation != nil {
 			cc := r.ContractCreation
