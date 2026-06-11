@@ -28,6 +28,16 @@ import (
 	"github.com/33cn/externaldb/escli"
 )
 
+
+// extractFuncFromTxData extracts function selector and name from tx input data.
+// Returns ("0x00000000", "unknown") if data is too short to parse.
+func extractFuncFromTxData(data []byte) (selector, name string) {
+	if len(data) < 4 {
+		return "0x00000000", "unknown"
+	}
+	return "0x" + hex.EncodeToString(data[:4]), "unknown"
+}
+
 // normalizeAddress 规范化地址，统一转换为小写
 // 以太坊地址是大小写不敏感的，统一转换为小写便于比较和查询
 func normalizeAddress(address string) string {
@@ -605,7 +615,24 @@ func (p *Process) processTransactionWithReceipt(tx *types.Transaction, block *ty
 
 	// 检查交易状态
 	if receipt.Status != types.ReceiptStatusSuccessful {
-		return fmt.Errorf("transaction failed, status: %d, tx: %s", receipt.Status, tx.Hash().Hex())
+		// 交易执行失败（revert），保存基本交易记录但跳过事件解析
+		log.Info("Transaction reverted, saving basic tx record only",
+			"txHash", tx.Hash().Hex(),
+			"height", block.NumberU64(),
+			"status", receipt.Status)
+		if p.EnableDB {
+			funcSelector, funcName := extractFuncFromTxData(tx.Data())
+			toAddr := common.Address{}
+			if tx.To() != nil {
+				toAddr = *tx.To()
+			}
+			if err := p.saveTransactionToDB(tx, receipt, block, toAddr, funcSelector, funcName); err != nil {
+				log.Error("Failed to save reverted transaction",
+					"err", err,
+					"txHash", tx.Hash().Hex())
+			}
+		}
+		return nil
 	}
 
 	// 根据交易类型处理
