@@ -82,6 +82,49 @@ func main() {
 	printHuman(rep)
 	if noteRep != nil {
 		printChain33NotePass(noteRep)
+		printNonceMatch(rep, noteRep)
+	}
+}
+
+// printNonceMatch compares chain33 EVM slot nonces against ETH transaction nonces
+// and prints a matching summary table.
+func printNonceMatch(eth *txinspect.BlockReport, c33 *chain33NoteReport) {
+	fmt.Printf("\n=== Nonce Matching (chain33 EVM ↔ ETH) ===\n")
+
+	// Collect ETH nonces with their indices
+	type ethNonce struct {
+		idx   int
+		nonce uint64
+		hash  string
+	}
+	var ethNonces []ethNonce
+	for _, slot := range eth.Transactions {
+		if slot.Diag != nil {
+			ethNonces = append(ethNonces, ethNonce{idx: slot.Index, nonce: slot.Diag.Nonce, hash: slot.TxHash})
+		} else if slot.Report != nil && slot.Report.Transaction != nil {
+			ethNonces = append(ethNonces, ethNonce{idx: slot.Index, nonce: slot.Report.Transaction.Nonce, hash: slot.TxHash})
+		}
+	}
+
+	// For each chain33 EVM slot, find matching ETH nonce
+	for _, it := range c33.Items {
+		if it.Skipped != "" {
+			continue
+		}
+		matched := -1
+		for _, e := range ethNonces {
+			if e.nonce == it.Nonce {
+				matched = e.idx
+				break
+			}
+		}
+		if matched >= 0 {
+			fmt.Printf("  c33:%d nonce=%d → ETH[%d] %s ✓\n", it.Index, it.Nonce, matched, ethNonces[matched].hash)
+		} else if it.Error != "" {
+			fmt.Printf("  c33:%d nonce=%d → N/A (decode err: %s)\n", it.Index, it.Nonce, it.Error)
+		} else {
+			fmt.Printf("  c33:%d nonce=%d → NOT FOUND in %d ETH txs\n", it.Index, it.Nonce, len(ethNonces))
+		}
 	}
 }
 

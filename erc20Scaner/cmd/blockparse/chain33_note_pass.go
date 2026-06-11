@@ -99,7 +99,7 @@ func runChain33NotePass(grpcAddr string, height int64) *chain33NoteReport {
 	}
 
 	for i, tx := range detail.Block.Txs {
-		item := chain33NoteItem{Index: i, Chain33TxHash: "0x" + hex.EncodeToString(tx.Hash()), Execer: string(tx.Execer)}
+		item := chain33NoteItem{Index: i, Chain33TxHash: "0x" + hex.EncodeToString(tx.Hash()), Execer: string(tx.Execer), Nonce: uint64(tx.GetNonce())}
 		if tx == nil {
 			item.Skipped = "nil tx"
 			out.Items = append(out.Items, item)
