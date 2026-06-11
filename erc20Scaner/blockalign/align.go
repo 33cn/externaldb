@@ -3,7 +3,6 @@ package blockalign
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
@@ -64,12 +63,8 @@ func AlignEthTxsByNonce(block *types.Block, expects []SlotEthExpect) ([]*types.T
 		cands = append(cands, candView{tx: tx, nonce: tx.Nonce(), fromHex: from.Hex()})
 	}
 
-	// 按 nonce 排序；parachain 交易混入时 ETH 区块中 nonce 不保证单调递增，
-	// 排序后 forward-only scan 才能正确匹配
-	sort.Slice(cands, func(i, j int) bool { return cands[i].nonce < cands[j].nonce })
-
 	out := make([]*types.Transaction, len(expects))
-	scan := 0
+	used := make([]bool, len(cands))
 	for i := range expects {
 		if !expects[i].NeedEth {
 			out[i] = nil
@@ -78,27 +73,27 @@ func AlignEthTxsByNonce(block *types.Block, expects []SlotEthExpect) ([]*types.T
 		wantN := expects[i].Nonce
 		wantF := expects[i].From
 
-		if scan >= len(cands) {
-			out[i] = nil
-			continue
-		}
-		// 跳过 nonce 仍小于期望的候选（多余或已过期的 eth 笔，顺序消费）
-		for scan < len(cands) && cands[scan].nonce < wantN {
-			scan++
-		}
-		if scan >= len(cands) || cands[scan].nonce > wantN {
-			out[i] = nil
-			continue
-		}
-		// cands[scan].nonce == wantN
-		pick := scan
-		if scan+1 < len(cands) && cands[scan+1].nonce == wantN {
-			if sameFromForTiebreak(wantF, cands[scan+1].fromHex) && !sameFromForTiebreak(wantF, cands[scan].fromHex) {
-				pick = scan + 1
+		// 线性搜索未消费的匹配 nonce 候选；parachain 混入时 nonce 不保证有序
+		found := -1
+		for j := 0; j < len(cands); j++ {
+			if used[j] || cands[j].nonce != wantN {
+				continue
 			}
+			found = j
+			// tie-break: 连续相同 nonce 时按 From 地址选择
+			if j+1 < len(cands) && !used[j+1] && cands[j+1].nonce == wantN {
+				if sameFromForTiebreak(wantF, cands[j+1].fromHex) && !sameFromForTiebreak(wantF, cands[j].fromHex) {
+					found = j + 1
+				}
+			}
+			break
 		}
-		out[i] = cands[pick].tx
-		scan = pick + 1
+		if found == -1 {
+			out[i] = nil
+			continue
+		}
+		used[found] = true
+		out[i] = cands[found].tx
 	}
 	return out, nil
 }
